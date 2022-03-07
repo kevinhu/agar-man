@@ -6,7 +6,7 @@ use std::{
     path::Path,
 };
 
-static MIN_LENGTH: usize = 3;
+static MIN_LENGTH: usize = 6;
 
 fn lines_from_file(filename: impl AsRef<Path>) -> io::Result<Vec<String>> {
     BufReader::new(File::open(filename)?).lines().collect()
@@ -37,7 +37,7 @@ fn contained(smaller: &str, larger: &str) -> bool {
     true
 }
 
-fn filter_line(line: &String, seed: &str) -> bool {
+fn filter_line(line: &String, seed: &String) -> bool {
     line.chars().all(char::is_alphanumeric)
         & (line.chars().count() >= MIN_LENGTH)
         & contained(line, seed)
@@ -87,12 +87,12 @@ impl Trie {
     }
 
     /** Outer anagram function */
-    fn anagram(&self, seed: &str) -> Vec<String> {
+    fn anagram(&self, seed: &String) -> Vec<String> {
         let seed_counter = to_counter(seed);
 
         let mut results = Vec::new();
 
-        self.anagram_recursive(seed_counter, String::new(), self, &mut results, true);
+        self.anagram_recursive(seed_counter, Vec::new(), self, &mut results, true);
 
         return results;
     }
@@ -101,7 +101,7 @@ impl Trie {
     fn anagram_recursive(
         &self,
         mut seed_counter: [u32; SIZE],
-        path: String,
+        path: Vec<String>,
         root: &Trie,
         results: &mut Vec<String>,
         root_call: bool,
@@ -110,10 +110,10 @@ impl Trie {
         if self.end_of_word {
             // if all characters have been used
             if seed_counter == [0; SIZE] {
-                // println!("{}", path);
-                results.push(path.clone());
+                results.push(path.join(" "));
             }
-            let newpath = path.clone() + " ";
+            let mut newpath = path.clone();
+            newpath.push("".to_string());
             // redo search from root
             let mut node_anagrams =
                 root.anagram_recursive(seed_counter, newpath, root, results, false);
@@ -133,7 +133,24 @@ impl Trie {
             }
             seed_counter[i] -= 1; // decrement the count of the letter in the seed
 
-            let newpath = path.clone() + &letter.to_string();
+            let mut newpath = path.clone();
+            let last_str = newpath.pop();
+
+            let last_last_str = newpath.last();
+
+            if last_str.is_some() {
+                let last_str_unwrap = last_str.unwrap();
+
+                if last_last_str.is_some() {
+                    if last_str_unwrap > *last_last_str.unwrap() {
+                        return;
+                    }
+                }
+
+                newpath.push(last_str_unwrap + &letter.to_string());
+            } else {
+                newpath.push(letter.to_string());
+            }
             // continue search from node
             let mut node_anagrams =
                 node.unwrap()
@@ -159,13 +176,14 @@ impl Trie {
 }
 
 fn main() {
-    let seed = "anagram";
+    let seed = "misunderstanding";
+    let seed = str::replace(seed, " ", "").to_string();
 
     let lines = lines_from_file("./dictionary.txt").expect("Could not load lines");
 
     println!("Total words: {}", lines.len());
 
-    let filter_line_closure = |line: &String| filter_line(line, seed);
+    let filter_line_closure = |line: &String| filter_line(line, &seed);
     let processed_lines: Vec<String> = lines // using String as the return type of `to_lowercase`
         .iter()
         .map(process_line)
@@ -179,7 +197,9 @@ fn main() {
         trie.insert(line);
     }
 
-    let anagrams = trie.anagram(seed);
+    let anagrams = trie.anagram(&seed);
+
+    println!("Anagrams: {}", anagrams.len());
 
     for anagram in anagrams {
         println!("{}", anagram);
