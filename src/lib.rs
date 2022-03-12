@@ -9,7 +9,7 @@ use std::str;
 use wasm_bindgen::prelude::*;
 use web_sys::console;
 
-static MIN_LENGTH: usize = 5;
+static MIN_LENGTH: usize = 6;
 
 use std::time::{Duration, Instant};
 
@@ -130,11 +130,11 @@ impl Trie {
             if !node.is_some() {
                 return;
             }
-            let letter = to_char(i);
             let count = seed_counter[i];
             if count == 0 {
                 return;
             }
+            let letter = to_char(i).to_string();
             seed_counter[i] -= 1; // decrement the count of the letter in the seed
 
             let mut newpath = path.clone();
@@ -151,9 +151,9 @@ impl Trie {
                     }
                 }
 
-                newpath.push(last_str_unwrap + &letter.to_string());
+                newpath.push(last_str_unwrap + &letter);
             } else {
-                newpath.push(letter.to_string());
+                newpath.push(letter);
             }
             // continue search from node
             let mut node_anagrams =
