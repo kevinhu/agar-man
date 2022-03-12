@@ -9,7 +9,7 @@ use std::str;
 use wasm_bindgen::prelude::*;
 use web_sys::console;
 
-static MIN_LENGTH: usize = 7;
+static MIN_LENGTH: usize = 5;
 
 use std::time::{Duration, Instant};
 
@@ -97,7 +97,7 @@ impl Trie {
 
         let mut results = Vec::new();
 
-        self.anagram_recursive(seed_counter, Vec::new(), self, &mut results, true);
+        self.anagram_recursive(seed_counter, Vec::new(), self, &mut results);
 
         return results;
     }
@@ -109,7 +109,6 @@ impl Trie {
         path: Vec<String>,
         root: &Trie,
         results: &mut Vec<String>,
-        root_call: bool,
     ) -> Vec<String> {
         let mut anagrams = Vec::new();
         if self.end_of_word {
@@ -121,7 +120,7 @@ impl Trie {
             newpath.push("".to_string());
             // redo search from root
             let mut node_anagrams =
-                root.anagram_recursive(seed_counter, newpath, root, results, false);
+                root.anagram_recursive(seed_counter, newpath, root, results);
             anagrams.append(&mut node_anagrams);
         }
 
@@ -159,7 +158,7 @@ impl Trie {
             // continue search from node
             let mut node_anagrams =
                 node.unwrap()
-                    .anagram_recursive(seed_counter, newpath, root, results, false);
+                    .anagram_recursive(seed_counter, newpath, root, results);
             anagrams.append(&mut node_anagrams);
             seed_counter[i] = count; // reset counter
         };
@@ -211,7 +210,7 @@ fn main() {
     let duration = start.elapsed();
     println!("Time elapsed: {:?}", duration);
     println!("Anagrams: {}", anagrams.len());
-    for anagram in anagrams {
-        println!("{}", anagram);
-    }
+    // for anagram in anagrams {
+    //     println!("{}", anagram);
+    // }
 }
