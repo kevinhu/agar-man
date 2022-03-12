@@ -1,16 +1,21 @@
-use indicatif::ProgressBar;
+// use indicatif::ProgressBar;
+// use std::io::{BufWriter, Write};
 use std::str;
-use std::{
-    fs::File,
-    io::{self, BufRead, BufReader},
-    path::Path,
-};
+// use std::{
+//     fs::File,
+//     io::{self, BufRead, BufReader},
+//     path::Path,
+// };
+use wasm_bindgen::prelude::*;
+use web_sys::{console};
 
-static MIN_LENGTH: usize = 6;
+static MIN_LENGTH: usize = 5;
 
-fn lines_from_file(filename: impl AsRef<Path>) -> io::Result<Vec<String>> {
-    BufReader::new(File::open(filename)?).lines().collect()
-}
+use std::time::{Duration, Instant};
+
+// fn lines_from_file(filename: impl AsRef<Path>) -> io::Result<Vec<String>> {
+//     BufReader::new(File::open(filename)?).lines().collect()
+// }
 
 fn process_line(line: &String) -> String {
     line.to_lowercase()
@@ -163,11 +168,8 @@ impl Trie {
             inner_loop(i);
         }
         if root_call {
-            let bar = ProgressBar::new(SIZE as u64);
-            bar.inc(0);
             for i in 0..SIZE {
                 inner_loop(i);
-                bar.inc(1);
             }
         }
 
@@ -175,13 +177,15 @@ impl Trie {
     }
 }
 
-fn main() {
+
+pub fn generate() -> Vec<String> {
+
+    let dictionary = include_str!("dictionary.txt");
+
     let seed = "misunderstanding";
     let seed = str::replace(seed, " ", "").to_string();
 
-    let lines = lines_from_file("./dictionary.txt").expect("Could not load lines");
-
-    println!("Total words: {}", lines.len());
+    let lines: Vec<String> = dictionary.split("\n").map(str::to_string).collect();
 
     let filter_line_closure = |line: &String| filter_line(line, &seed);
     let processed_lines: Vec<String> = lines // using String as the return type of `to_lowercase`
@@ -190,8 +194,6 @@ fn main() {
         .filter(filter_line_closure)
         .collect();
 
-    println!("Filtered words: {}", processed_lines.len());
-
     let mut trie = Trie::new();
     for line in processed_lines {
         trie.insert(line);
@@ -199,9 +201,26 @@ fn main() {
 
     let anagrams = trie.anagram(&seed);
 
-    println!("Anagrams: {}", anagrams.len());
+    return anagrams;
 
-    for anagram in anagrams {
-        println!("{}", anagram);
-    }
+    // console::log_2(&"Anagrams:".into(), &anagrams.len().into());
+
+    // for anagram in anagrams {
+    //     console::log_2(&"Anagram:".into(), &anagram.into());
+    // }
+}
+
+#[wasm_bindgen]
+pub fn js_generate() {
+    console_error_panic_hook::set_once();
+    let anagrams = generate();
+    console::log_2(&"Anagrams:".into(), &anagrams.len().into());
+}
+
+fn main() {
+    let start = Instant::now();
+    let anagrams = generate();
+    let duration = start.elapsed();
+    println!("Time elapsed: {:?}", duration);
+    println!("Anagrams: {}", anagrams.len());
 }
