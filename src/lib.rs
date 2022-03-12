@@ -7,9 +7,9 @@ use std::str;
 //     path::Path,
 // };
 use wasm_bindgen::prelude::*;
-use web_sys::{console};
+use web_sys::console;
 
-static MIN_LENGTH: usize = 5;
+static MIN_LENGTH: usize = 7;
 
 use std::time::{Duration, Instant};
 
@@ -167,19 +167,12 @@ impl Trie {
         for i in 0..SIZE {
             inner_loop(i);
         }
-        if root_call {
-            for i in 0..SIZE {
-                inner_loop(i);
-            }
-        }
 
         return anagrams;
     }
 }
 
-
 pub fn generate() -> Vec<String> {
-
     let dictionary = include_str!("dictionary.txt");
 
     let seed = "misunderstanding";
@@ -202,12 +195,6 @@ pub fn generate() -> Vec<String> {
     let anagrams = trie.anagram(&seed);
 
     return anagrams;
-
-    // console::log_2(&"Anagrams:".into(), &anagrams.len().into());
-
-    // for anagram in anagrams {
-    //     console::log_2(&"Anagram:".into(), &anagram.into());
-    // }
 }
 
 #[wasm_bindgen]
@@ -217,10 +204,14 @@ pub fn js_generate() {
     console::log_2(&"Anagrams:".into(), &anagrams.len().into());
 }
 
+#[allow(dead_code)]
 fn main() {
     let start = Instant::now();
     let anagrams = generate();
     let duration = start.elapsed();
     println!("Time elapsed: {:?}", duration);
     println!("Anagrams: {}", anagrams.len());
+    for anagram in anagrams {
+        println!("{}", anagram);
+    }
 }
