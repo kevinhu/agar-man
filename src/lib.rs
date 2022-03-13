@@ -127,8 +127,7 @@ impl Trie {
         current_word: &mut Vec<usize>,
         previous_word: &mut Vec<usize>,
         results: &mut Vec<String>,
-    ) -> Vec<Vec<usize>> {
-        let mut anagrams = Vec::new();
+    ) {
         if self.end_of_word {
             // if all characters have been used
             if seed_counter == [0; SIZE] {
@@ -140,7 +139,7 @@ impl Trie {
             previous_word.extend_from_slice(&current_word);
             current_word.clear();
             // redo search from root
-            let mut node_anagrams = root.anagram_recursive(
+            root.anagram_recursive(
                 seed_counter,
                 path,
                 root,
@@ -148,7 +147,6 @@ impl Trie {
                 previous_word,
                 results,
             );
-            anagrams.append(&mut node_anagrams);
             path.pop();
             current_word.clear();
             current_word.extend_from_slice(&previous_word);
@@ -174,7 +172,7 @@ impl Trie {
             path.push(i);
             current_word.push(i);
             // continue search from node
-            let mut node_anagrams = node.unwrap().anagram_recursive(
+            node.unwrap().anagram_recursive(
                 seed_counter,
                 path,
                 root,
@@ -182,7 +180,6 @@ impl Trie {
                 previous_word,
                 results,
             );
-            anagrams.append(&mut node_anagrams);
             path.pop(); // pop the letter from the path
             current_word.pop(); // pop the letter from the current word
             seed_counter[i] = count; // reset counter
@@ -191,15 +188,13 @@ impl Trie {
         for i in 0..SIZE {
             inner_loop(i);
         }
-
-        return anagrams;
     }
 }
 
 pub fn generate() -> Vec<String> {
     let dictionary = include_str!("dictionary.txt");
 
-    let min_length = 5;
+    let min_length = 4;
     let seed = "misunderstanding";
     let seed = str::replace(seed, " ", "").to_string();
 
