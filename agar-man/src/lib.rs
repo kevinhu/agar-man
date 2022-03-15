@@ -194,10 +194,9 @@ impl Trie {
     }
 }
 
-pub fn generate(seed: String) -> Vec<String> {
+pub fn generate(seed: String, min_length: usize) -> Vec<String> {
     let dictionary = include_str!("dictionary.txt");
 
-    let min_length = 5;
     let seed = str::replace(seed.as_str(), " ", "").to_string();
 
     let lines: Vec<String> = dictionary.split("\n").map(str::to_string).collect();
@@ -220,9 +219,9 @@ pub fn generate(seed: String) -> Vec<String> {
 }
 
 #[wasm_bindgen]
-pub fn js_generate(seed:String) -> js_sys::Array  {
+pub fn js_generate(seed:String, min_length: usize) -> js_sys::Array  {
     console_error_panic_hook::set_once();
-    let anagrams = generate(seed.into());
+    let anagrams = generate(seed.into(), min_length.into());
     let arr = Array::new_with_length(anagrams.len() as u32);
     for i in 0..arr.length() {
         let s = JsValue::from_str(anagrams[i as usize].as_str());
@@ -234,7 +233,7 @@ pub fn js_generate(seed:String) -> js_sys::Array  {
 #[allow(dead_code)]
 fn main() {
     let start = Instant::now();
-    let anagrams = generate("misunderstanding".to_string());
+    let anagrams = generate("misunderstanding".to_string(), 5);
     let duration = start.elapsed();
     println!("Time elapsed: {:?}", duration);
     println!("Anagrams: {}", anagrams.len());

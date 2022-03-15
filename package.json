@@ -13,7 +13,12 @@
     "vite-plugin-wasm-pack": "^0.1.9"
   },
   "dependencies": {
+    "@kamona/tailwindcss-perspective": "^0.1.1",
+    "@tailwindcss/line-clamp": "^0.3.1",
+    "autoprefixer": "^10.4.2",
+    "postcss": "^8.4.10",
     "react": "^17.0.2",
-    "react-dom": "^17.0.2"
+    "react-dom": "^17.0.2",
+    "tailwindcss": "^3.0.23"
   }
 }
