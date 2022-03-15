@@ -2,6 +2,7 @@ use std::time::Instant;
 use std::{cmp, str};
 use wasm_bindgen::prelude::*;
 use web_sys::console;
+use js_sys::Array;
 
 fn process_line(line: &String) -> String {
     line.to_lowercase()
@@ -191,12 +192,11 @@ impl Trie {
     }
 }
 
-pub fn generate() -> Vec<String> {
+pub fn generate(seed: String) -> Vec<String> {
     let dictionary = include_str!("dictionary.txt");
 
-    let min_length = 4;
-    let seed = "misunderstanding";
-    let seed = str::replace(seed, " ", "").to_string();
+    let min_length = 5;
+    let seed = str::replace(seed.as_str(), " ", "").to_string();
 
     let lines: Vec<String> = dictionary.split("\n").map(str::to_string).collect();
 
@@ -218,20 +218,25 @@ pub fn generate() -> Vec<String> {
 }
 
 #[wasm_bindgen]
-pub fn js_generate() {
+pub fn js_generate(seed:String) -> js_sys::Array  {
     console_error_panic_hook::set_once();
-    let anagrams = generate();
-    console::log_2(&"Anagrams:".into(), &anagrams.len().into());
+    let anagrams = generate(seed.into());
+    let arr = Array::new_with_length(anagrams.len() as u32);
+    for i in 0..arr.length() {
+        let s = JsValue::from_str(anagrams[i as usize].as_str());
+        arr.set(i, s);
+    }
+    arr
 }
 
 #[allow(dead_code)]
 fn main() {
     let start = Instant::now();
-    let anagrams = generate();
+    let anagrams = generate("misunderstanding".to_string());
     let duration = start.elapsed();
     println!("Time elapsed: {:?}", duration);
     println!("Anagrams: {}", anagrams.len());
-    // for anagram in anagrams {
-    //     println!("{}", anagram);
-    // }
+    for anagram in anagrams {
+        println!("{}", anagram);
+    }
 }

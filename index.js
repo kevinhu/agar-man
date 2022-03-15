@@ -6,7 +6,7 @@ const rust = import("./pkg");
 rust
   .then((m) => {
     var start = window.performance.now();
-    m.js_generate();
+    let strings = m.js_generate("misunderstanding");
     var end = window.performance.now();
     console.log(`Execution time: ${end - start} ms`);
   })
