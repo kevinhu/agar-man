@@ -1,3 +1,6 @@
+extern crate wasm_bindgen;
+extern crate js_sys;
+
 use std::time::Instant;
 use std::{cmp, str};
 use wasm_bindgen::prelude::*;
@@ -235,7 +238,7 @@ fn main() {
     let duration = start.elapsed();
     println!("Time elapsed: {:?}", duration);
     println!("Anagrams: {}", anagrams.len());
-    for anagram in anagrams {
-        println!("{}", anagram);
-    }
+    // for anagram in anagrams {
+    //     println!("{}", anagram);
+    // }
 }

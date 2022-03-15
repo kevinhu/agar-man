@@ -1,18 +1,29 @@
-import { useState } from "react";
-const rust = import("../agar-man/pkg");
+import { useEffect, useState } from "react";
+// const rust = import("../agar-man/pkg");
+import init, { js_generate } from "agar-man";
 
-rust
-  .then((m) => {
-    var start = window.performance.now();
-    let strings = m.js_generate("misunderstanding");
-    console.log(strings);
-    var end = window.performance.now();
-    console.log(`Execution time: ${end - start} ms`);
-  })
-  .catch(console.error);
+// rust
+//   .then((m) => {
+//     var start = window.performance.now();
+//     let strings = m.js_generate("misunderstanding");
+//     console.log(strings);
+//     var end = window.performance.now();
+//     console.log(`Execution time: ${end - start} ms`);
+//   })
+//   .catch(console.error);
 
 function App() {
   const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    init().then((raw) => {
+      var start = window.performance.now();
+      let strings = js_generate("misunderstanding");
+      // console.log(strings);
+      var end = window.performance.now();
+      console.log(`Execution time: ${end - start} ms`);
+    });
+  }, []);
 
   return (
     <div className="App">
