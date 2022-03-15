@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import init, { js_generate } from "agar-man";
+import { stringify } from "postcss";
 
 const Poem: React.VFC<{ seed: string; sentence: string[] }> = ({
   seed,
@@ -58,9 +59,12 @@ const Poem: React.VFC<{ seed: string; sentence: string[] }> = ({
 
 function App() {
   const [seed, setSeed] = useState("anagram");
-  const [renderedSeed, setRenderedSeed] = useState("anagram");
   const [results, setResults] = useState<string[]>([]);
-  const [sentence, setSentence] = useState<string[]|null>(null);
+
+  const [rendered, setRendered] = useState<{seed: string, sentence:string[]}>({
+    seed: "anagram",
+    sentence: ["agar", "man"],
+  })
 
   const [minLength, setMinLength] = useState<number | null>(3);
   const [executionTime, setExecutionTime] = useState(0);
@@ -68,16 +72,7 @@ function App() {
 
   useEffect(() => {
     generate();
-    setSentence(["agar", "man"]);
   }, []);
-
-  useEffect(()=>{
-
-    if(seed && results.length > 0 && sentence === null){
-      setSentence(results[0].split("|"))
-    }
-
-  }, [sentence, results])
 
   const generate = () => {
     init().then(() => {
@@ -95,8 +90,6 @@ function App() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            setRenderedSeed(seed);
-            setSentence(null);
             generate();
           }}
         >
@@ -166,7 +159,7 @@ function App() {
                 key={result}
                 className="flex px-2 hover:bg-gray-100 w-full"
                 onClick={() => {
-                  setSentence(split_result);
+                  setRendered({seed,sentence:split_result});
                 }}
               >
                 {split_result.map((word) => (
@@ -179,7 +172,11 @@ function App() {
           })}
         </div>
       </div>
-      <div>{sentence !== null && <Poem seed={renderedSeed} sentence={sentence} />}</div>
+      <div>
+        {rendered !== null && (
+          <Poem seed={rendered.seed} sentence={rendered.sentence} />
+        )}
+      </div>
     </div>
   );
 }
