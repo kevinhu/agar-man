@@ -1,15 +1,15 @@
 import { useState } from "react";
-// const rust = import("./pkg");
+const rust = import("../agar-man/pkg");
 
-// rust
-//   .then((m) => {
-//     var start = window.performance.now();
-//     let strings = m.js_generate("misunderstanding");
-//     console.log(strings);
-//     var end = window.performance.now();
-//     console.log(`Execution time: ${end - start} ms`);
-//   })
-//   .catch(console.error);
+rust
+  .then((m) => {
+    var start = window.performance.now();
+    let strings = m.js_generate("misunderstanding");
+    console.log(strings);
+    var end = window.performance.now();
+    console.log(`Execution time: ${end - start} ms`);
+  })
+  .catch(console.error);
 
 function App() {
   const [count, setCount] = useState(0);
