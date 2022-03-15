@@ -9,7 +9,7 @@ crate-type = ["cdylib"]
 
 [[bin]]
 name = "main"
-path = "src/lib.rs"
+path = "rust-src/lib.rs"
 
 [profile.release]
 debug = true

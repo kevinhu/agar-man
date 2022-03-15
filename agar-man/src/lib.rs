@@ -1,7 +1,6 @@
 use std::time::Instant;
 use std::{cmp, str};
 use wasm_bindgen::prelude::*;
-use web_sys::console;
 use js_sys::Array;
 
 fn process_line(line: &String) -> String {
