@@ -1,0 +1,12 @@
+{
+  "name": "agar-man",
+  "version": "0.1.0",
+  "files": [
+    "agar_man_bg.wasm",
+    "agar_man.js",
+    "agar_man.d.ts"
+  ],
+  "module": "agar_man.js",
+  "types": "agar_man.d.ts",
+  "sideEffects": false
+}
