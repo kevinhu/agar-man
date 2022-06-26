@@ -1,6 +1,9 @@
 import init, { js_generate } from "agar-man";
 import { useEffect, useState } from "react";
+import CopyToClipboard from "react-copy-to-clipboard";
 import { BsArrowRightShort } from "react-icons/bs";
+import { FaCheck } from "react-icons/fa";
+import { FiLink } from "react-icons/fi";
 import { RiShareBoxFill } from "react-icons/ri";
 import AutoSizer from "react-virtualized-auto-sizer";
 import { FixedSizeList as List } from "react-window";
@@ -207,13 +210,10 @@ export const Search = () => {
             />
           )}
         </div>
-        <div className="flex flex-col justify-center mx-auto">
+        <div className="flex flex-col items-center justify-center mx-auto">
           {rendered !== null && (
             <>
               <Poem seed={rendered.seed} sentence={rendered.sentence} />
-              <a className="mx-auto mt-8 text-lg" href={`/share/${rendered.seed}/${rendered.sentence.join(",")}`} target="_blank">
-                <RiShareBoxFill />
-              </a>
             </>
           )}
         </div>
