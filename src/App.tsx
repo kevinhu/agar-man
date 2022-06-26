@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import init, { js_generate } from "agar-man";
 import { stringify } from "postcss";
-import {BsArrowRightShort} from 'react-icons/bs'
+import { BsArrowRightShort } from "react-icons/bs";
 
 const Poem: React.VFC<{ seed: string; sentence: string[] }> = ({
   seed,
@@ -17,8 +17,8 @@ const Poem: React.VFC<{ seed: string; sentence: string[] }> = ({
     }
   });
 
-  console.log(seed)
-  console.log(sentence)
+  console.log(seed);
+  console.log(sentence);
 
   return (
     <div className="flex">
@@ -58,16 +58,53 @@ const Poem: React.VFC<{ seed: string; sentence: string[] }> = ({
   );
 };
 
+interface Rendered {
+  seed: string;
+  sentence: string[];
+}
+
+const Results: React.VFC<{
+  results: string[];
+  setRendered: React.Dispatch<React.SetStateAction<Rendered>>;
+  renderedSeed: string;
+}> = ({ results, setRendered, renderedSeed }) => {
+  return (
+    <div className="overflow-y-scroll">
+      {results.map((result) => {
+        const split_result = result.split("|");
+
+        return (
+          <button
+            key={result}
+            className="flex w-full px-2 hover:bg-gray-100"
+            onClick={() => {
+              setRendered({ seed: renderedSeed, sentence: split_result });
+            }}
+          >
+            {split_result.map((word) => (
+              <div key={word} className="mr-2">
+                {word}
+              </div>
+            ))}
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
 function App() {
   const [seed, setSeed] = useState("anagram");
   const [renderedSeed, setRenderedSeed] = useState("anagram");
 
+  const [loading, setLoading] = useState(false);
+
   const [results, setResults] = useState<string[]>([]);
 
-  const [rendered, setRendered] = useState<{seed: string, sentence:string[]}>({
+  const [rendered, setRendered] = useState<Rendered>({
     seed: "anagram",
     sentence: ["agar", "man"],
-  })
+  });
 
   const [minLength, setMinLength] = useState<number | null>(3);
   const [executionTime, setExecutionTime] = useState(0);
@@ -78,6 +115,7 @@ function App() {
   }, []);
 
   const generate = () => {
+    setLoading(true);
     init().then(() => {
       var start = window.performance.now();
       let r = js_generate(seed.toLowerCase(), minLength || 5);
@@ -85,13 +123,14 @@ function App() {
       setRenderedSeed(seed);
       var end = window.performance.now();
       setExecutionTime(Math.floor(end - start));
+      setLoading(false);
     });
   };
 
   return (
     <div className="flex h-screen max-w-screen-md p-4 mx-auto">
       <div className="flex w-full border border-black">
-        <div className="flex flex-col w-1/2 h-screen border-r border-black sm:w-1/2 md:w-1/3">
+        <div className="flex flex-col w-1/2 border-r border-black sm:w-1/2 md:w-1/3">
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -104,6 +143,7 @@ function App() {
               placeholder="Starter word..."
               type="text"
               value={seed}
+              disabled={loading}
               onChange={(e) => {
                 const newLengthOptions = [];
 
@@ -141,51 +181,49 @@ function App() {
             <button
               type="submit"
               className="px-2 border-b border-l border-black hover:bg-gray-100"
+              disabled={loading}
             >
               <BsArrowRightShort />
             </button>
           </form>
-          <div className="flex w-full">
-            {lengthOptions.map((length, index) => {
-              return (
-                <button
-                  key={length}
-                  onClick={() => setMinLength(length)}
-                  className={`px-2 py-1 text-sm border-r ${
-                    length === minLength && "bg-black text-white"
-                  }`}
-                >
-                  {length} {index === lengthOptions.length - 1 && "+"}
-                </button>
-              );
-            })}
-          </div>
+          {lengthOptions.length > 0 && (
+            <div className="flex w-full text-sm border-b border-black">
+              <div className="px-2 py-1">Min len</div>
+              {lengthOptions.map((length, index) => {
+                return (
+                  <button
+                    key={length}
+                    onClick={() => {
+                      setMinLength(length);
+                    }}
+                    className={`px-2 py-1 text-sm border-r ${
+                      length === minLength && "bg-black text-white"
+                    }`}
+                  >
+                    {length} {index === lengthOptions.length - 1 && "+"}
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           <div className="px-2 pt-1 pb-1 text-sm text-gray-400 border-b border-black">
-            {results.length} results in {executionTime}ms
+            {loading ? (
+              <>Loading...</>
+            ) : (
+              <>
+                {results.length} results in {executionTime}ms
+              </>
+            )}
           </div>
 
-          <div className="overflow-y-scroll">
-            {results.map((result) => {
-              const split_result = result.split("|");
-
-              return (
-                <button
-                  key={result}
-                  className="flex w-full px-2 hover:bg-gray-100"
-                  onClick={() => {
-                    setRendered({ seed:renderedSeed, sentence: split_result });
-                  }}
-                >
-                  {split_result.map((word) => (
-                    <div key={word} className="mr-2">
-                      {word}
-                    </div>
-                  ))}
-                </button>
-              );
-            })}
-          </div>
+          {!loading && (
+            <Results
+              results={results}
+              setRendered={setRendered}
+              renderedSeed={renderedSeed}
+            />
+          )}
         </div>
         <div>
           {rendered !== null && (
