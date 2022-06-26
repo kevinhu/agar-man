@@ -65,8 +65,6 @@ const Results: React.VFC<{
   setRendered: React.Dispatch<React.SetStateAction<Rendered>>;
   renderedSeed: string;
 }> = ({ results, setRendered, renderedSeed }) => {
-  console.log("rendering");
-
   return (
     <div className="overflow-y-scroll">
       {results.map((result) => {
@@ -165,6 +163,7 @@ const Input: React.VFC<{
                 key={length}
                 onClick={() => {
                   setMinLength(length);
+                  generate({ seed, minLength: length });
                 }}
                 className={`px-2 py-1 text-sm border-r border-b border-t -mb-px border-black ${
                   length === minLength && "bg-black text-white"
