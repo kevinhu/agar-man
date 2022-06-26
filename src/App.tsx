@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import init, { js_generate } from "agar-man";
 import { stringify } from "postcss";
 import { BsArrowRightShort } from "react-icons/bs";
+import { FixedSizeList as List } from "react-window";
+import AutoSizer from "react-virtualized-auto-sizer";
 
 const Poem: React.VFC<{ seed: string; sentence: string[] }> = ({
   seed,
@@ -65,27 +67,44 @@ const Results: React.VFC<{
   setRendered: React.Dispatch<React.SetStateAction<Rendered>>;
   renderedSeed: string;
 }> = ({ results, setRendered, renderedSeed }) => {
-  return (
-    <div className="overflow-y-scroll">
-      {results.map((result) => {
-        const split_result = result.split("|");
 
-        return (
-          <button
-            key={result}
-            className="flex w-full px-2 hover:bg-gray-100"
-            onClick={() => {
-              setRendered({ seed: renderedSeed, sentence: split_result });
-            }}
+  return (
+    <div className="h-screen overflow-y-scroll">
+      <AutoSizer>
+        {({ height, width }) => (
+          <List
+            className="List"
+            height={height}
+            itemCount={results.length}
+            itemSize={22}
+            width={width}
+            itemData={results}
           >
-            {split_result.map((word, index) => (
-              <div key={index} className="mr-2">
-                {word}
-              </div>
-            ))}
-          </button>
-        );
-      })}
+            {({ data, index, style }) => {
+
+              const result = data[index];
+              const split_result = result.split("|");
+
+              return (
+                <button
+                  key={result}
+                  className="flex w-full px-2 hover:bg-gray-100"
+                  onClick={() => {
+                    setRendered({ seed: renderedSeed, sentence: split_result });
+                  }}
+                  style={style}
+                >
+                  {split_result.map((word, index) => (
+                    <div key={index} className="mr-2">
+                      {word}
+                    </div>
+                  ))}
+                </button>
+              );
+            }}
+          </List>
+        )}
+      </AutoSizer>
     </div>
   );
 };
