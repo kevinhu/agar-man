@@ -19,7 +19,7 @@ const Poem: React.VFC<{ seed: string; sentence: string[] }> = ({
 
   return (
     <div className="flex">
-      {sentence.map((word,index) => (
+      {sentence.map((word, index) => (
         <div className="flex ml-4" key={index}>
           {word.split("").map((letter, index) => {
             const letterIndex = charPositions[letter].shift()!;
@@ -78,7 +78,7 @@ const Results: React.VFC<{
               setRendered({ seed: renderedSeed, sentence: split_result });
             }}
           >
-            {split_result.map((word,index) => (
+            {split_result.map((word, index) => (
               <div key={index} className="mr-2">
                 {word}
               </div>
@@ -217,9 +217,9 @@ function App() {
   };
 
   return (
-    <div className="flex h-screen max-w-screen-md p-4 mx-auto">
+    <div className="flex w-full h-screen max-w-screen-md p-0 mx-auto md:p-4">
       <div className="flex w-full border border-black">
-        <div className="flex flex-col w-1/2 border-r border-black sm:w-1/2 md:w-1/3">
+        <div className="flex flex-col w-1/2 border-r border-black xs:w-1/2 sm:w-1/3">
           <Input loading={loading} generate={generate} />
 
           <div className="px-2 pt-1 pb-1 text-sm text-gray-400 border-b border-black">
