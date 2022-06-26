@@ -17,9 +17,6 @@ const Poem: React.VFC<{ seed: string; sentence: string[] }> = ({
     }
   });
 
-  console.log(seed);
-  console.log(sentence);
-
   return (
     <div className="flex">
       {sentence.map((word) => (
@@ -187,7 +184,7 @@ function App() {
             </button>
           </form>
           {lengthOptions.length > 0 && (
-            <div className="flex w-full text-sm border-b border-black">
+            <div className="flex flex-wrap w-full -mt-px text-sm border-b border-black">
               <div className="px-2 py-1">Min len</div>
               {lengthOptions.map((length, index) => {
                 return (
@@ -196,7 +193,7 @@ function App() {
                     onClick={() => {
                       setMinLength(length);
                     }}
-                    className={`px-2 py-1 text-sm border-r ${
+                    className={`px-2 py-1 text-sm border-r border-b border-t -mb-px border-black ${
                       length === minLength && "bg-black text-white"
                     }`}
                   >
@@ -212,7 +209,8 @@ function App() {
               <>Loading...</>
             ) : (
               <>
-                {results.length} results in {executionTime}ms
+                {results.length.toLocaleString("en-US")} results in{" "}
+                {executionTime.toLocaleString("en-US")}ms
               </>
             )}
           </div>
