@@ -60,6 +60,8 @@ const Poem: React.VFC<{ seed: string; sentence: string[] }> = ({
 
 function App() {
   const [seed, setSeed] = useState("anagram");
+  const [renderedSeed, setRenderedSeed] = useState("anagram");
+
   const [results, setResults] = useState<string[]>([]);
 
   const [rendered, setRendered] = useState<{seed: string, sentence:string[]}>({
@@ -80,6 +82,7 @@ function App() {
       var start = window.performance.now();
       let r = js_generate(seed.toLowerCase(), minLength || 5);
       setResults([...r]);
+      setRenderedSeed(seed);
       var end = window.performance.now();
       setExecutionTime(Math.floor(end - start));
     });
@@ -171,7 +174,7 @@ function App() {
                   key={result}
                   className="flex w-full px-2 hover:bg-gray-100"
                   onClick={() => {
-                    setRendered({ seed, sentence: split_result });
+                    setRendered({ seed:renderedSeed, sentence: split_result });
                   }}
                 >
                   {split_result.map((word) => (
