@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import init, { js_generate } from "agar-man";
 import { stringify } from "postcss";
+import {BsArrowRightShort} from 'react-icons/bs'
 
 const Poem: React.VFC<{ seed: string; sentence: string[] }> = ({
   seed,
@@ -22,7 +23,7 @@ const Poem: React.VFC<{ seed: string; sentence: string[] }> = ({
   return (
     <div className="flex">
       {sentence.map((word) => (
-        <div className="ml-4 flex" key={word}>
+        <div className="flex ml-4" key={word}>
           {word.split("").map((letter, index) => {
             const letterIndex = charPositions[letter].shift()!;
             const offset = seed.length - letterIndex;
@@ -77,7 +78,7 @@ function App() {
   const generate = () => {
     init().then(() => {
       var start = window.performance.now();
-      let r = js_generate(seed, minLength || 5);
+      let r = js_generate(seed.toLowerCase(), minLength || 5);
       setResults([...r]);
       var end = window.performance.now();
       setExecutionTime(Math.floor(end - start));
@@ -85,97 +86,109 @@ function App() {
   };
 
   return (
-    <div className="flex h-screen">
-      <div className="w-1/2 sm:w-1/3 md:w-1/4 lg:w-1/6 border-r h-screen flex flex-col">
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            generate();
-          }}
-        >
-          <input
-            className="border-b w-full px-2 py-1"
-            type="text"
-            value={seed}
-            onChange={(e) => {
-              const newLengthOptions = [];
-
-              const min = Math.max(
-                2,
-                Math.ceil(Math.sqrt(e.target.value.length))
-              );
-
-              for (
-                let i = min;
-                i < Math.ceil(e.target.value.length / 2) + 1;
-                i++
-              ) {
-                newLengthOptions.push(Math.floor(i));
-              }
-
-              setLengthOptions(newLengthOptions);
-
-              if (minLength === null || minLength === undefined) {
-                setMinLength(newLengthOptions[0]);
-              } else {
-                if (minLength < newLengthOptions[0]) {
-                  setMinLength(newLengthOptions[0]);
-                }
-                if (minLength > newLengthOptions[newLengthOptions.length - 1]) {
-                  setMinLength(newLengthOptions[newLengthOptions.length - 1]);
-                }
-              }
-
-              setSeed(e.target.value);
+    <div className="flex h-screen max-w-screen-md p-4 mx-auto">
+      <div className="flex w-full border border-black">
+        <div className="flex flex-col w-1/2 h-screen border-r border-black sm:w-1/2 md:w-1/3">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              generate();
             }}
-          />
-        </form>
-        <div className="flex w-full">
-          {lengthOptions.map((length, index) => {
-            return (
-              <button
-                key={length}
-                onClick={() => setMinLength(length)}
-                className={`px-2 py-1 text-sm border-r ${
-                  length === minLength && "bg-black text-white"
-                }`}
-              >
-                {length} {index === lengthOptions.length - 1 && "+"}
-              </button>
-            );
-          })}
-        </div>
+            className="flex"
+          >
+            <input
+              className="w-full px-2 py-1 border-b border-black"
+              placeholder="Starter word..."
+              type="text"
+              value={seed}
+              onChange={(e) => {
+                const newLengthOptions = [];
 
-        <div className="text-gray-400 px-2 pt-1 border-b">
-          {results.length} results in {executionTime}ms
-        </div>
+                const min = Math.max(
+                  2,
+                  Math.ceil(Math.sqrt(e.target.value.length))
+                );
 
-        <div className="overflow-y-scroll">
-          {results.map((result) => {
-            const split_result = result.split("|");
+                for (
+                  let i = min;
+                  i < Math.ceil(e.target.value.length / 2) + 1;
+                  i++
+                ) {
+                  newLengthOptions.push(Math.floor(i));
+                }
 
-            return (
-              <button
-                key={result}
-                className="flex px-2 hover:bg-gray-100 w-full"
-                onClick={() => {
-                  setRendered({seed,sentence:split_result});
-                }}
-              >
-                {split_result.map((word) => (
-                  <div key={word} className="mr-2">
-                    {word}
-                  </div>
-                ))}
-              </button>
-            );
-          })}
+                setLengthOptions(newLengthOptions);
+
+                if (minLength === null || minLength === undefined) {
+                  setMinLength(newLengthOptions[0]);
+                } else {
+                  if (minLength < newLengthOptions[0]) {
+                    setMinLength(newLengthOptions[0]);
+                  }
+                  if (
+                    minLength > newLengthOptions[newLengthOptions.length - 1]
+                  ) {
+                    setMinLength(newLengthOptions[newLengthOptions.length - 1]);
+                  }
+                }
+
+                setSeed(e.target.value);
+              }}
+            />
+            <button
+              type="submit"
+              className="px-2 border-b border-l border-black hover:bg-gray-100"
+            >
+              <BsArrowRightShort />
+            </button>
+          </form>
+          <div className="flex w-full">
+            {lengthOptions.map((length, index) => {
+              return (
+                <button
+                  key={length}
+                  onClick={() => setMinLength(length)}
+                  className={`px-2 py-1 text-sm border-r ${
+                    length === minLength && "bg-black text-white"
+                  }`}
+                >
+                  {length} {index === lengthOptions.length - 1 && "+"}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="px-2 pt-1 pb-1 text-sm text-gray-400 border-b border-black">
+            {results.length} results in {executionTime}ms
+          </div>
+
+          <div className="overflow-y-scroll">
+            {results.map((result) => {
+              const split_result = result.split("|");
+
+              return (
+                <button
+                  key={result}
+                  className="flex w-full px-2 hover:bg-gray-100"
+                  onClick={() => {
+                    setRendered({ seed, sentence: split_result });
+                  }}
+                >
+                  {split_result.map((word) => (
+                    <div key={word} className="mr-2">
+                      {word}
+                    </div>
+                  ))}
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
-      <div>
-        {rendered !== null && (
-          <Poem seed={rendered.seed} sentence={rendered.sentence} />
-        )}
+        <div>
+          {rendered !== null && (
+            <Poem seed={rendered.seed} sentence={rendered.sentence} />
+          )}
+        </div>
       </div>
     </div>
   );
