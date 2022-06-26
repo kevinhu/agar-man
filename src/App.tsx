@@ -65,6 +65,8 @@ const Results: React.VFC<{
   setRendered: React.Dispatch<React.SetStateAction<Rendered>>;
   renderedSeed: string;
 }> = ({ results, setRendered, renderedSeed }) => {
+  console.log("rendering");
+
   return (
     <div className="overflow-y-scroll">
       {results.map((result) => {
@@ -90,8 +92,95 @@ const Results: React.VFC<{
   );
 };
 
-function App() {
+const Input: React.VFC<{
+  loading: boolean;
+  generate: ({ seed, minLength }: { seed: string; minLength: number }) => void;
+}> = ({ loading, generate }) => {
   const [seed, setSeed] = useState("anagram");
+
+  const [minLength, setMinLength] = useState<number | null>(3);
+  const [lengthOptions, setLengthOptions] = useState<number[]>([]);
+
+  return (
+    <>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          generate({ seed, minLength: minLength || 5 });
+        }}
+        className="flex"
+      >
+        <input
+          className="w-full px-2 py-1 border-b border-black"
+          placeholder="Starter word..."
+          type="text"
+          value={seed}
+          disabled={loading}
+          onChange={(e) => {
+            const newLengthOptions = [];
+
+            const min = Math.max(
+              2,
+              Math.ceil(Math.sqrt(e.target.value.length))
+            );
+
+            for (
+              let i = min;
+              i < Math.ceil(e.target.value.length / 2) + 1;
+              i++
+            ) {
+              newLengthOptions.push(Math.floor(i));
+            }
+
+            setLengthOptions(newLengthOptions);
+
+            if (minLength === null || minLength === undefined) {
+              setMinLength(newLengthOptions[0]);
+            } else {
+              if (minLength < newLengthOptions[0]) {
+                setMinLength(newLengthOptions[0]);
+              }
+              if (minLength > newLengthOptions[newLengthOptions.length - 1]) {
+                setMinLength(newLengthOptions[newLengthOptions.length - 1]);
+              }
+            }
+
+            setSeed(e.target.value);
+          }}
+        />
+        <button
+          type="submit"
+          className="px-2 border-b border-l border-black hover:bg-gray-100"
+          disabled={loading}
+        >
+          <BsArrowRightShort />
+        </button>
+      </form>
+      {lengthOptions.length > 0 && (
+        <div className="flex flex-wrap w-full -mt-px text-sm border-b border-black">
+          <div className="px-2 py-1">Min len</div>
+          {lengthOptions.map((length, index) => {
+            return (
+              <button
+                key={length}
+                onClick={() => {
+                  setMinLength(length);
+                }}
+                className={`px-2 py-1 text-sm border-r border-b border-t -mb-px border-black ${
+                  length === minLength && "bg-black text-white"
+                }`}
+              >
+                {length} {index === lengthOptions.length - 1 && "+"}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </>
+  );
+};
+
+function App() {
   const [renderedSeed, setRenderedSeed] = useState("anagram");
 
   const [loading, setLoading] = useState(false);
@@ -103,15 +192,19 @@ function App() {
     sentence: ["agar", "man"],
   });
 
-  const [minLength, setMinLength] = useState<number | null>(3);
   const [executionTime, setExecutionTime] = useState(0);
-  const [lengthOptions, setLengthOptions] = useState<number[]>([]);
 
   useEffect(() => {
-    generate();
+    generate({ seed: "anagram", minLength: 3 });
   }, []);
 
-  const generate = () => {
+  const generate = ({
+    seed,
+    minLength,
+  }: {
+    seed: string;
+    minLength: number;
+  }) => {
     setLoading(true);
     init().then(() => {
       var start = window.performance.now();
@@ -128,81 +221,7 @@ function App() {
     <div className="flex h-screen max-w-screen-md p-4 mx-auto">
       <div className="flex w-full border border-black">
         <div className="flex flex-col w-1/2 border-r border-black sm:w-1/2 md:w-1/3">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              generate();
-            }}
-            className="flex"
-          >
-            <input
-              className="w-full px-2 py-1 border-b border-black"
-              placeholder="Starter word..."
-              type="text"
-              value={seed}
-              disabled={loading}
-              onChange={(e) => {
-                const newLengthOptions = [];
-
-                const min = Math.max(
-                  2,
-                  Math.ceil(Math.sqrt(e.target.value.length))
-                );
-
-                for (
-                  let i = min;
-                  i < Math.ceil(e.target.value.length / 2) + 1;
-                  i++
-                ) {
-                  newLengthOptions.push(Math.floor(i));
-                }
-
-                setLengthOptions(newLengthOptions);
-
-                if (minLength === null || minLength === undefined) {
-                  setMinLength(newLengthOptions[0]);
-                } else {
-                  if (minLength < newLengthOptions[0]) {
-                    setMinLength(newLengthOptions[0]);
-                  }
-                  if (
-                    minLength > newLengthOptions[newLengthOptions.length - 1]
-                  ) {
-                    setMinLength(newLengthOptions[newLengthOptions.length - 1]);
-                  }
-                }
-
-                setSeed(e.target.value);
-              }}
-            />
-            <button
-              type="submit"
-              className="px-2 border-b border-l border-black hover:bg-gray-100"
-              disabled={loading}
-            >
-              <BsArrowRightShort />
-            </button>
-          </form>
-          {lengthOptions.length > 0 && (
-            <div className="flex flex-wrap w-full -mt-px text-sm border-b border-black">
-              <div className="px-2 py-1">Min len</div>
-              {lengthOptions.map((length, index) => {
-                return (
-                  <button
-                    key={length}
-                    onClick={() => {
-                      setMinLength(length);
-                    }}
-                    className={`px-2 py-1 text-sm border-r border-b border-t -mb-px border-black ${
-                      length === minLength && "bg-black text-white"
-                    }`}
-                  >
-                    {length} {index === lengthOptions.length - 1 && "+"}
-                  </button>
-                );
-              })}
-            </div>
-          )}
+          <Input loading={loading} generate={generate} />
 
           <div className="px-2 pt-1 pb-1 text-sm text-gray-400 border-b border-black">
             {loading ? (
