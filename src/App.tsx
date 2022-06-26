@@ -19,8 +19,8 @@ const Poem: React.VFC<{ seed: string; sentence: string[] }> = ({
 
   return (
     <div className="flex">
-      {sentence.map((word) => (
-        <div className="flex ml-4" key={word}>
+      {sentence.map((word,index) => (
+        <div className="flex ml-4" key={index}>
           {word.split("").map((letter, index) => {
             const letterIndex = charPositions[letter].shift()!;
             const offset = seed.length - letterIndex;
@@ -78,8 +78,8 @@ const Results: React.VFC<{
               setRendered({ seed: renderedSeed, sentence: split_result });
             }}
           >
-            {split_result.map((word) => (
-              <div key={word} className="mr-2">
+            {split_result.map((word,index) => (
+              <div key={index} className="mr-2">
                 {word}
               </div>
             ))}
@@ -206,11 +206,11 @@ function App() {
   }) => {
     setLoading(true);
     init().then(() => {
-      var start = window.performance.now();
-      let r = js_generate(seed.toLowerCase(), minLength || 5);
+      const start = window.performance.now();
+      const r = js_generate(seed.toLowerCase(), minLength || 5);
       setResults([...r]);
       setRenderedSeed(seed);
-      var end = window.performance.now();
+      const end = window.performance.now();
       setExecutionTime(Math.floor(end - start));
       setLoading(false);
     });
@@ -241,7 +241,7 @@ function App() {
             />
           )}
         </div>
-        <div>
+        <div className="flex flex-col justify-center mx-auto">
           {rendered !== null && (
             <Poem seed={rendered.seed} sentence={rendered.sentence} />
           )}
