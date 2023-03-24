@@ -76,6 +76,9 @@ const Input: React.VFC<{
       >
         <input
           spellCheck="false"
+          autoCapitalize="none"
+          autoCorrect="off"
+          autoComplete="off"
           className="w-full px-2 py-1 border-b border-black outline-none"
           placeholder="Starter word..."
           type="text"
