@@ -3,14 +3,30 @@
 /**
 * @param {string} seed
 * @param {number} min_length
-* @returns {Array<any>}
+* @returns {ResultsStruct}
 */
-export function js_generate(seed: string, min_length: number): Array<any>;
+export function js_generate(seed: string, min_length: number): ResultsStruct;
+/**
+*/
+export class ResultsStruct {
+  free(): void;
+/**
+*/
+  anagrams: Array<any>;
+/**
+*/
+  partials: Array<any>;
+}
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
+  readonly __wbg_resultsstruct_free: (a: number) => void;
+  readonly __wbg_get_resultsstruct_anagrams: (a: number) => number;
+  readonly __wbg_set_resultsstruct_anagrams: (a: number, b: number) => void;
+  readonly __wbg_get_resultsstruct_partials: (a: number) => number;
+  readonly __wbg_set_resultsstruct_partials: (a: number, b: number) => void;
   readonly js_generate: (a: number, b: number, c: number) => number;
   readonly __wbindgen_malloc: (a: number) => number;
   readonly __wbindgen_realloc: (a: number, b: number, c: number) => number;

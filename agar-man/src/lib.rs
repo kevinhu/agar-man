@@ -1,10 +1,10 @@
-extern crate wasm_bindgen;
 extern crate js_sys;
+extern crate wasm_bindgen;
 
+use js_sys::Array;
 use std::time::Instant;
 use std::{cmp, str};
 use wasm_bindgen::prelude::*;
-use js_sys::Array;
 
 fn process_line(line: &String) -> String {
     line.to_lowercase()
@@ -194,7 +194,7 @@ impl Trie {
     }
 }
 
-pub fn generate(seed: String, min_length: usize) -> Vec<String> {
+pub fn generate(seed: String, min_length: usize) -> (Vec<String>, Vec<String>) {
     let dictionary = include_str!("dictionary.txt");
 
     let seed = str::replace(seed.as_str(), " ", "").to_string();
@@ -209,34 +209,53 @@ pub fn generate(seed: String, min_length: usize) -> Vec<String> {
         .collect();
 
     let mut trie = Trie::new();
-    for line in processed_lines {
-        trie.insert(line);
+    for line in &processed_lines {
+        trie.insert(line.clone());
     }
 
     let anagrams = trie.anagram(&seed);
 
-    return anagrams;
+    return (anagrams, processed_lines);
+}
+
+#[wasm_bindgen(getter_with_clone)]
+pub struct ResultsStruct {
+    // pub value: String, // This won't work. See working example below.
+    pub anagrams: js_sys::Array,
+    pub partials: js_sys::Array,
 }
 
 #[wasm_bindgen]
-pub fn js_generate(seed:String, min_length: usize) -> js_sys::Array  {
+pub fn js_generate(seed: String, min_length: usize) -> ResultsStruct {
     console_error_panic_hook::set_once();
-    let anagrams = generate(seed.into(), min_length.into());
-    let arr = Array::new_with_length(anagrams.len() as u32);
-    for i in 0..arr.length() {
+    let (anagrams, partials) = generate(seed.into(), min_length.into());
+
+    let anagrams_js = Array::new_with_length(anagrams.len() as u32);
+    for i in 0..anagrams_js.length() {
         let s = JsValue::from_str(anagrams[i as usize].as_str());
-        arr.set(i, s);
+        anagrams_js.set(i, s);
     }
-    arr
+
+    let partials_js = Array::new_with_length(partials.len() as u32);
+    for i in 0..partials_js.length() {
+        let s = JsValue::from_str(partials[i as usize].as_str());
+        partials_js.set(i, s);
+    }
+
+    return ResultsStruct {
+        anagrams: anagrams_js,
+        partials: partials_js,
+    };
 }
 
 #[allow(dead_code)]
 fn main() {
     let start = Instant::now();
-    let anagrams = generate("misunderstanding".to_string(), 5);
+    let (anagrams, partials) = generate("misunderstanding".to_string(), 5);
     let duration = start.elapsed();
     println!("Time elapsed: {:?}", duration);
     println!("Anagrams: {}", anagrams.len());
+    println!("Partials: {}", partials.len());
     // for anagram in anagrams {
     //     println!("{}", anagram);
     // }

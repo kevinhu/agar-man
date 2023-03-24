@@ -1,10 +1,7 @@
+import { Tab } from "@headlessui/react";
 import init, { js_generate } from "agar-man";
-import { useEffect, useState } from "react";
-import CopyToClipboard from "react-copy-to-clipboard";
+import { Fragment, useEffect, useState } from "react";
 import { BsArrowRightShort } from "react-icons/bs";
-import { FaCheck } from "react-icons/fa";
-import { FiLink } from "react-icons/fi";
-import { RiShareBoxFill } from "react-icons/ri";
 import AutoSizer from "react-virtualized-auto-sizer";
 import { FixedSizeList as List } from "react-window";
 import { Poem } from "../components/Poem";
@@ -78,7 +75,8 @@ const Input: React.VFC<{
         className="flex"
       >
         <input
-          className="w-full px-2 py-1 border-b border-black"
+          spellCheck="false"
+          className="w-full px-2 py-1 border-b border-black outline-none"
           placeholder="Starter word..."
           type="text"
           value={seed}
@@ -154,6 +152,7 @@ export const Search = () => {
   const [loading, setLoading] = useState(false);
 
   const [results, setResults] = useState<string[]>([]);
+  const [partials, setPartials] = useState<string[]>([]);
 
   const [rendered, setRendered] = useState<Rendered>({
     seed: "anagram",
@@ -176,8 +175,16 @@ export const Search = () => {
     setLoading(true);
     init().then(() => {
       const start = window.performance.now();
-      const r = js_generate(seed.toLowerCase(), minLength || 5);
-      setResults([...r]);
+      const { anagrams, partials } = js_generate(
+        seed.toLowerCase(),
+        minLength || 5
+      );
+      setResults([...anagrams]);
+      setPartials(
+        [...partials].sort((a, b) => {
+          return b.length - a.length;
+        })
+      );
       setRenderedSeed(seed);
       const end = window.performance.now();
       setExecutionTime(Math.floor(end - start));
@@ -203,11 +210,48 @@ export const Search = () => {
           </div>
 
           {!loading && (
-            <Results
-              results={results}
-              setRendered={setRendered}
-              renderedSeed={renderedSeed}
-            />
+            <Tab.Group as={Fragment}>
+              <Tab.List className="flex text-sm border-b border-black">
+                <Tab as={Fragment}>
+                  {({ selected }) => (
+                    <button
+                      className={`${
+                        selected ? "bg-black text-white" : "hover:bg-slate-100"
+                      } w-1/2 py-1 border-r border-black outline-none`}
+                    >
+                      Partials
+                    </button>
+                  )}
+                </Tab>
+                <Tab as={Fragment}>
+                  {({ selected }) => (
+                    <button
+                      className={`${
+                        selected ? "bg-black text-white" : "hover:bg-slate-100"
+                      } w-1/2 py-1 outline-none`}
+                    >
+                      Partitions
+                    </button>
+                  )}
+                </Tab>
+              </Tab.List>
+              <Tab.Panels as={Fragment}>
+                <Tab.Panel as={Fragment}>
+                  <Results
+                    results={partials}
+                    setRendered={setRendered}
+                    renderedSeed={renderedSeed}
+                  />
+                </Tab.Panel>
+                <Tab.Panel as={Fragment}>
+                  <Results
+                    results={results}
+                    setRendered={setRendered}
+                    renderedSeed={renderedSeed}
+                  />
+                </Tab.Panel>
+              </Tab.Panels>
+            </Tab.Group>
           )}
         </div>
         <div className="flex flex-col items-center justify-center mx-auto">
@@ -220,4 +264,4 @@ export const Search = () => {
       </div>
     </div>
   );
-}
+};
