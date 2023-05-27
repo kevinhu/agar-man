@@ -259,7 +259,7 @@ export const Search = () => {
               ) : (
                 <>
                   {results.length.toLocaleString("en-US")} results in{" "}
-                  {executionTime.toLocaleString("en-US")}ms for "{renderedSeed}"
+                  {(executionTime/1000).toLocaleString("en-US")}s for "{renderedSeed}"
                 </>
               )}
             </div>
