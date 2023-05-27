@@ -1,7 +1,7 @@
 import { Tab } from "@headlessui/react";
 import init, { js_generate } from "agar-man";
 import { Fragment, useEffect, useState } from "react";
-import { BsArrowRightShort } from "react-icons/bs";
+import { GrReturn } from "react-icons/gr";
 import AutoSizer from "react-virtualized-auto-sizer";
 import { FixedSizeList as List } from "react-window";
 import { Poem } from "../components/Poem";
@@ -16,7 +16,7 @@ const Results: React.VFC<{
   setRendered: React.Dispatch<React.SetStateAction<Rendered>>;
   renderedSeed: string;
   renderedSentence: string;
-}> = ({ results, setRendered, renderedSeed,renderedSentence }) => {
+}> = ({ results, setRendered, renderedSeed, renderedSentence }) => {
   return (
     <div className="h-full overflow-y-scroll">
       <AutoSizer>
@@ -38,7 +38,9 @@ const Results: React.VFC<{
               return (
                 <button
                   key={result}
-                  className={`flex w-full px-2 text-sm text-neutral-500 hover:text-black hover:bg-neutral-200 ${isSelected && 'bg-neutral-200 text-black'}`}
+                  className={`flex w-full px-2 text-sm text-neutral-500 hover:text-black hover:bg-neutral-200 ${
+                    isSelected && "bg-neutral-200 text-black"
+                  }`}
                   onClick={() => {
                     setRendered({ seed: renderedSeed, sentence: result });
                   }}
@@ -79,7 +81,7 @@ const Input: React.VFC<{
 
   const [lengthOptions, setLengthOptions] = useState<number[]>([]);
   const [maxWordsOptions, setMaxWordsOptions] = useState<number[]>([
-    2, 3, 4, 5, 6, 7,
+    1, 2, 3, 4, 5, 6, 7, 8
   ]);
 
   return (
@@ -96,15 +98,15 @@ const Input: React.VFC<{
           autoCapitalize="none"
           autoCorrect="off"
           autoComplete="off"
-          className="w-full px-2 py-1 border-b border-neutral-300 outline-none"
-          placeholder="Starter word..."
+          className="w-full px-2 py-1 border-b border-black outline-none"
+          placeholder="Phrase to search..."
           type="text"
           value={seed}
           disabled={loading}
           onChange={(e) => {
             const newLengthOptions = [];
 
-            for (let i = 3; i < Math.ceil(e.target.value.length / 2) + 1; i++) {
+            for (let i = 2; i < Math.ceil(e.target.value.length / 2) + 1; i++) {
               newLengthOptions.push(Math.floor(i));
             }
 
@@ -121,15 +123,17 @@ const Input: React.VFC<{
               }
             }
 
-            let cleanedSeed = e.target.value.replace(/[^a-zA-Z]/g, "").toLowerCase();
+            let cleanedSeed = e.target.value
+              .replace(/[^a-zA-Z]\s/g, "")
+              .toLowerCase();
 
             setSeed(cleanedSeed);
           }}
         />
       </form>
       {lengthOptions.length > 0 && (
-        <div className="flex flex-wrap w-full text-sm border-b border-neutral-300 select-none">
-          <div className="px-2 py-1">Minimum word length</div>
+        <div className="flex flex-wrap w-full text-sm border-b border-black select-none">
+          <div className="px-2 py-1 border-r border-neutral-300">Minimum word length</div>
           {lengthOptions.map((length, index) => {
             return (
               <button
@@ -138,7 +142,7 @@ const Input: React.VFC<{
                   setMinLength(length);
                   // generate({ seed, minLength: length, maxWords });
                 }}
-                className={`px-2 py-1 text-sm border-l ${
+                className={`px-2 py-1 text-sm border-r ${
                   length === minLength && "bg-black text-white"
                 }`}
               >
@@ -150,7 +154,7 @@ const Input: React.VFC<{
       )}
       {maxWordsOptions.length > 0 && (
         <div className="flex flex-wrap w-full text-sm select-none">
-          <div className="px-2 py-1">Max words</div>
+          <div className="px-2 py-1 border-r  border-neutral-300">Max words</div>
           {maxWordsOptions.map((max, index) => {
             return (
               <button
@@ -159,7 +163,7 @@ const Input: React.VFC<{
                   setMaxWords(max);
                   // generate({ seed, minLength, maxWords: max });
                 }}
-                className={`px-2 py-1 text-sm border-l border-neutral-300 ${
+                className={`px-2 py-1 text-sm border-r border-neutral-300 ${
                   maxWords === max && "bg-black text-white"
                 }`}
               >
@@ -171,14 +175,16 @@ const Input: React.VFC<{
       )}
       <button
         type="submit"
-        className="px-2 flex justify-center items-center border-t py-1 border-black hover:bg-gray-100 select-none"
+        className="px-2 flex justify-center items-center border-t py-1 border-black hover:bg-neutral-100 select-none"
         disabled={loading}
         onClick={() => {
           generate({ seed, minLength, maxWords });
         }}
       >
         Generate
-        <BsArrowRightShort />
+        <span className="px-1 py-0.5 ml-2 border-neutral-300 bg-neutral-200s border">
+          <GrReturn />
+        </span>
       </button>
     </>
   );
@@ -253,7 +259,7 @@ export const Search = () => {
               ) : (
                 <>
                   {results.length.toLocaleString("en-US")} results in{" "}
-                  {executionTime.toLocaleString("en-US")}ms
+                  {executionTime.toLocaleString("en-US")}ms for "{renderedSeed}"
                 </>
               )}
             </div>
@@ -271,7 +277,7 @@ export const Search = () => {
                         className={`${
                           selected
                             ? "bg-black text-white"
-                            : "hover:bg-slate-100"
+                            : "hover:bg-neutral-100"
                         } w-1/2 py-1 outline-none`}
                       >
                         Partitions
@@ -284,7 +290,7 @@ export const Search = () => {
                         className={`${
                           selected
                             ? "bg-black text-white"
-                            : "hover:bg-slate-100"
+                            : "hover:bg-neutral-100"
                         } w-1/2 py-1 border-l border-black outline-none`}
                       >
                         Partials
@@ -316,7 +322,12 @@ export const Search = () => {
           <div className="flex flex-col items-center justify-center mx-auto">
             {rendered !== null && (
               <>
-                <Poem key={rendered.sentence} seed={rendered.seed} sentence={rendered.sentence} />
+                <Poem
+                  key={rendered.sentence}
+                  seed={rendered.seed}
+                  sentence={rendered.sentence}
+                  showPerms
+                />
               </>
             )}
           </div>

@@ -15,9 +15,10 @@ function getPermutations<T>(arr: T[]): T[][] {
   return perms;
 }
 
-export const Poem: React.VFC<{ seed: string; sentence: string }> = ({
+export const Poem: React.VFC<{ seed: string; sentence: string, showPerms:boolean }> = ({
   seed,
   sentence,
+  showPerms,
 }) => {
   const charPositions: { [key: string]: number[] } = {};
 
@@ -80,11 +81,12 @@ export const Poem: React.VFC<{ seed: string; sentence: string }> = ({
         text={`${window.location.origin}/share/${seed}/${displayedSentence.replace(" ",",")}`}
         onCopy={() => setCopied(true)}
       >
-        <button className="p-2 mt-6 hover:bg-gray-100">
+        <button className="p-2 mt-6 hover:bg-neutrals-100">
           {copied ? <FaCheck className="text-green-500" /> : <FiLink />}
         </button>
       </CopyToClipboard>
-      <div className="flex items-center flex-col mt-8">
+      
+      {showPerms && <div className="flex items-center flex-col mt-8">
         <h1>Permutations</h1>
         <div className="flex flex-wrap text-neutral-400 gap-4 justify-center items-center p-4">
           {perms.map((perm, index) => {
@@ -106,7 +108,7 @@ export const Poem: React.VFC<{ seed: string; sentence: string }> = ({
             );
           })}
         </div>
-      </div>
+      </div>}
     </div>
   );
 };

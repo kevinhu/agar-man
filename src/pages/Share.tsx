@@ -9,7 +9,11 @@ export const Share = () => {
       <div className="flex flex-col items-center justify-center p-12 border border-black">
         <div>
           {seed && components && (
-            <Poem seed={seed} sentence={components?.split(",")} />
+            <Poem
+              seed={seed}
+              sentence={components.replace(",", " ")}
+              showPerms={false}
+            />
           )}
         </div>
       </div>
