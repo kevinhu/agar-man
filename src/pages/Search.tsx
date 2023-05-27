@@ -8,14 +8,15 @@ import { Poem } from "../components/Poem";
 
 interface Rendered {
   seed: string;
-  sentence: string[];
+  sentence: string;
 }
 
 const Results: React.VFC<{
   results: string[];
   setRendered: React.Dispatch<React.SetStateAction<Rendered>>;
   renderedSeed: string;
-}> = ({ results, setRendered, renderedSeed }) => {
+  renderedSentence: string;
+}> = ({ results, setRendered, renderedSeed,renderedSentence }) => {
   return (
     <div className="h-full overflow-y-scroll">
       <AutoSizer>
@@ -32,17 +33,19 @@ const Results: React.VFC<{
               const result = data[index];
               const split_result = result.split(" ");
 
+              const isSelected = renderedSentence === result;
+
               return (
                 <button
                   key={result}
-                  className="flex w-full px-2 hover:bg-gray-100"
+                  className={`flex w-full px-2 text-sm text-neutral-500 hover:text-black hover:bg-neutral-200 ${isSelected && 'bg-neutral-200 text-black'}`}
                   onClick={() => {
-                    setRendered({ seed: renderedSeed, sentence: split_result });
+                    setRendered({ seed: renderedSeed, sentence: result });
                   }}
                   style={style}
                 >
                   {split_result.map((word, index) => (
-                    <div key={index} className="mr-2">
+                    <div key={index} className="mr-1">
                       {word}
                     </div>
                   ))}
@@ -118,7 +121,9 @@ const Input: React.VFC<{
               }
             }
 
-            setSeed(e.target.value);
+            let cleanedSeed = e.target.value.replace(/[^a-zA-Z]/g, "").toLowerCase();
+
+            setSeed(cleanedSeed);
           }}
         />
       </form>
@@ -191,7 +196,7 @@ export const Search = () => {
 
   const [rendered, setRendered] = useState<Rendered>({
     seed: "anagram",
-    sentence: ["agar", "man"],
+    sentence: "agar man",
   });
 
   const [executionTime, setExecutionTime] = useState(0);
@@ -232,7 +237,7 @@ export const Search = () => {
 
   return (
     <div className="sm:p-2 md:p-4 p-0 h-screen flex w-full">
-      <div className="flex flex-col w-full max-w-screen-md mx-auto">
+      <div className="flex flex-col w-full max-w-screen-lg mx-auto">
         <div className="flex flex-col border-black border">
           <Input
             loading={loading}
@@ -241,7 +246,7 @@ export const Search = () => {
           />
         </div>
         <div className="flex w-full grow border mt-4 border-black">
-          <div className="flex flex-col w-1/2 border-r border-black xs:w-1/2 sm:w-1/3">
+          <div className="flex flex-col w-1/2 border-r border-black xs:w-1/2 sm:w-1/3 shrink-0">
             <div className="px-2 pt-1 pb-1 text-sm text-neutral-400 border-b border-black select-none">
               {loading ? (
                 <>Loading...</>
@@ -293,6 +298,7 @@ export const Search = () => {
                       results={results}
                       setRendered={setRendered}
                       renderedSeed={renderedSeed}
+                      renderedSentence={rendered.sentence}
                     />
                   </Tab.Panel>
                   <Tab.Panel as={Fragment}>
@@ -300,6 +306,7 @@ export const Search = () => {
                       results={partials}
                       setRendered={setRendered}
                       renderedSeed={renderedSeed}
+                      renderedSentence={rendered.sentence}
                     />
                   </Tab.Panel>
                 </Tab.Panels>
@@ -309,7 +316,7 @@ export const Search = () => {
           <div className="flex flex-col items-center justify-center mx-auto">
             {rendered !== null && (
               <>
-                <Poem seed={rendered.seed} sentence={rendered.sentence} />
+                <Poem key={rendered.sentence} seed={rendered.seed} sentence={rendered.sentence} />
               </>
             )}
           </div>
