@@ -103,12 +103,13 @@ function passStringToWasm0(arg, malloc, realloc) {
 /**
 * @param {string} seed
 * @param {number} min_length
+* @param {number} max_num_words
 * @returns {ResultsStruct}
 */
-export function js_generate(seed, min_length) {
+export function js_generate(seed, min_length, max_num_words) {
     var ptr0 = passStringToWasm0(seed, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     var len0 = WASM_VECTOR_LEN;
-    var ret = wasm.js_generate(ptr0, len0, min_length);
+    var ret = wasm.js_generate(ptr0, len0, min_length, max_num_words);
     return ResultsStruct.__wrap(ret);
 }
 

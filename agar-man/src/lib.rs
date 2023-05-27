@@ -2,20 +2,15 @@ extern crate js_sys;
 extern crate wasm_bindgen;
 use itertools::Itertools;
 use js_sys::Array;
-use nohash_hasher::{IntMap, IntSet, NoHashHasher};
-use rug::integer::IntegerExt64;
-use rug::Integer;
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::{HashMap, HashSet};
 use std::hash::BuildHasherDefault;
-use std::ops::Bound::Included;
 use std::time::Instant;
-use std::u64::MAX;
 use std::{cmp, str};
 use wasm_bindgen::prelude::*;
 use rustc_hash::{FxHashMap, FxHasher};
 
-#[global_allocator]
-static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+// #[global_allocator]
+// static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 fn process_line(line: &String) -> String {
     line.to_lowercase()
@@ -37,9 +32,10 @@ fn contained(smaller: &str, larger: &str) -> bool {
     return counter_contains(&larger_counts, &smaller_counts);
 }
 
-fn filter_line(line: &String, seed: &String, min_length: usize) -> bool {
+fn filter_line(line: &String, seed: &str, min_length: usize) -> bool {
+
     line.chars().all(char::is_alphanumeric)
-        & (line.chars().count() >= min_length)
+        & (line.len() >= min_length)
         & contained(line, seed)
 }
 
@@ -261,10 +257,10 @@ impl Trie {
     }
 }
 
-pub fn generate(seed: String, min_length: usize) -> (Vec<String>, Vec<String>) {
+pub fn trie_solve(seed: &str, min_length: usize) -> (Vec<String>, Vec<String>) {
     let dictionary = include_str!("dictionary.txt");
 
-    let seed = str::replace(seed.as_str(), " ", "").to_string();
+    let seed = str::replace(seed, " ", "").to_string();
 
     let lines: Vec<String> = dictionary.split("\n").map(str::to_string).collect();
 
@@ -283,36 +279,6 @@ pub fn generate(seed: String, min_length: usize) -> (Vec<String>, Vec<String>) {
     let anagrams = trie.anagram(&seed);
 
     return (anagrams, processed_lines);
-}
-
-#[wasm_bindgen(getter_with_clone)]
-pub struct ResultsStruct {
-    // pub value: String, // This won't work. See working example below.
-    pub anagrams: js_sys::Array,
-    pub partials: js_sys::Array,
-}
-
-#[wasm_bindgen]
-pub fn js_generate(seed: String, min_length: usize) -> ResultsStruct {
-    console_error_panic_hook::set_once();
-    let (anagrams, partials) = generate(seed.into(), min_length.into());
-
-    let anagrams_js = Array::new_with_length(anagrams.len() as u32);
-    for i in 0..anagrams_js.length() {
-        let s = JsValue::from_str(anagrams[i as usize].as_str());
-        anagrams_js.set(i, s);
-    }
-
-    let partials_js = Array::new_with_length(partials.len() as u32);
-    for i in 0..partials_js.length() {
-        let s = JsValue::from_str(partials[i as usize].as_str());
-        partials_js.set(i, s);
-    }
-
-    return ResultsStruct {
-        anagrams: anagrams_js,
-        partials: partials_js,
-    };
 }
 
 const GRID_SIZE: usize = 4;
@@ -465,18 +431,6 @@ fn solve_grid() {
     }
 }
 
-fn trie_solve() {
-    let start = Instant::now();
-    let (anagrams, partials) = generate("misunderstanding".to_string(), 3);
-    let duration = start.elapsed();
-    println!("Time elapsed: {:?}", duration);
-    println!("Anagrams: {}", anagrams.len());
-    println!("Partials: {}", partials.len());
-    // for anagram in anagrams {
-    //     println!("{}", anagram);
-    // }
-}
-
 const PRIMES: [u64; 26] = [
     2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97,
     101,
@@ -625,24 +579,22 @@ fn find_anagrams_counter(
     }
 }
 
-fn counter_solve() {
-    let target = "misunderstanding".to_string();
-    let min_word_length = 3;
-    let max_num_words = 10;
+fn counter_solve(target: &str, min_length: usize, max_num_words: usize) -> (Vec<String>, Vec<String>) {
+    // filter out all non-abecedarian characters
+    let target = target
+        .chars()
+        .filter(|c| c.is_ascii_alphabetic())
+        .collect::<String>().to_lowercase();
 
     let dictionary = include_str!("dictionary.txt");
     let lines: Vec<String> = dictionary.split("\n").map(str::to_string).collect();
 
-    println!("Dictionary size: {}", lines.len());
-
-    let filter_line_closure = |line: &String| filter_line(line, &target, min_word_length);
+    let filter_line_closure = |line: &String| filter_line(line, &target, min_length);
     let filtered_lines: Vec<String> = lines // using String as the return type of `to_lowercase`
         .iter()
         .map(process_line)
         .filter(filter_line_closure)
         .collect();
-
-    println!("Filtered words: {}", filtered_lines.len());
 
     let mut letter_frequencies = [0; ALPHA_SIZE];
     for line in &filtered_lines {
@@ -654,17 +606,12 @@ fn counter_solve() {
         }
     }
 
-    println!("Letter frequencies: {:?}", letter_frequencies);
-
     // sort primes by character frequency
     // argsort letter_frequencies
     let mut index_map: [usize; ALPHA_SIZE] = [
         0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
         25,
     ];
-
-    let target_counts = to_counter(&target);
-    println!("Target counts: {:?}", target_counts);
 
     // argsort target_counts
     let mut sorted_indices: Vec<usize> = (0..ALPHA_SIZE).collect();
@@ -675,19 +622,11 @@ fn counter_solve() {
         index_map[*j] = i;
     }
 
-    println!("Ordered indices: {:?}", index_map);
-    let ordered_target_counts = to_counter_indexed(&target, &index_map);
-    println!("Ordered target counts: {:?}", ordered_target_counts);
-
-    println!("Sorted indices: {:?}", index_map);
-
     // assign primes to letters
     let mut letter_primes = [0; ALPHA_SIZE];
     for (i, j) in sorted_indices.iter().enumerate() {
         letter_primes[*j] = PRIMES[i];
     }
-
-    println!("Letter primes: {:?}", letter_primes);
 
     // hashmap of products to words
     let mut products_to_words: HashMap<WordProduct, Vec<String>, BuildHasherDefault<FxHasher>> = FxHashMap::default();
@@ -703,7 +642,7 @@ fn counter_solve() {
         let length = line.len();
         for c in line.chars() {
             let i = to_index(c);
-            product *= (letter_primes[i] as WordProduct);
+            product *= letter_primes[i] as WordProduct;
         }
 
         let product_counter = to_counter_indexed(&line, &index_map);
@@ -724,27 +663,15 @@ fn counter_solve() {
     }
     root.sort();
 
-    println!("Products: {:?}", product_to_counter.len());
-
     let mut target_counter = to_counter_indexed(&target, &index_map);
-
-    println!("Target counter: {:?}", target_counter);
-
-    let mut result_products = Vec::new();
-
-    root.retrieve_anagrams(&target_counter, 0, &mut result_products);
-
-    println!("Result products: {:?}", result_products.len());
-
     let mut found_anagrams = Vec::new();
-
     let mut cache = FxHashMap::default();
 
     find_anagrams_counter(
         target.len(),
         &mut target_counter,
         &product_to_length,
-        &min_word_length,
+        &min_length,
         &max_num_words,
         &mut Vec::with_capacity(target.len()),
         &mut found_anagrams,
@@ -754,23 +681,79 @@ fn counter_solve() {
         &mut cache
     );
 
-    println!("Found anagrams: {:?}", found_anagrams.len());
+    found_anagrams.sort_by(|a, b| b.len().cmp(&a.len()));
+
+    // convert to strings, expanding each product to all possible words
+    let mut found_anagrams_strings = Vec::new();
+
+    for anagram in &found_anagrams {
+        let mut anagram_strings = Vec::new();
+        for product in anagram {
+            let words = products_to_words.get(product).unwrap();
+            anagram_strings.push(words.clone());
+        }
+        // take the cartesian product of the words
+        let expanded = anagram_strings
+            .iter()
+            .multi_cartesian_product();
+
+        for mut product in expanded {
+            let mut string = String::new();
+            // sort words alphabetically
+            glidesort::sort(&mut product);
+            for word in product {
+                string.push_str(word);
+                string.push(' ');
+            }
+            string.pop();
+            found_anagrams_strings.push(string);
+        }
+    }
+
+    glidesort::sort(&mut found_anagrams_strings);
+
+    return (found_anagrams_strings, filtered_lines);
+}
+
+#[wasm_bindgen(getter_with_clone)]
+pub struct ResultsStruct {
+    // pub value: String, // This won't work. See working example below.
+    pub anagrams: js_sys::Array,
+    pub partials: js_sys::Array,
+}
+
+#[wasm_bindgen]
+pub fn js_generate(seed: String, min_length: usize, max_num_words: usize) -> ResultsStruct {
+    console_error_panic_hook::set_once();
+    let (anagrams, partials) = counter_solve(&seed, min_length, max_num_words);
+
+    let anagrams_js = Array::new_with_length(anagrams.len() as u32);
+    for i in 0..anagrams_js.length() {
+        let s = JsValue::from_str(anagrams[i as usize].as_str());
+        anagrams_js.set(i, s);
+    }
+
+    let partials_js = Array::new_with_length(partials.len() as u32);
+    for i in 0..partials_js.length() {
+        let s = JsValue::from_str(partials[i as usize].as_str());
+        partials_js.set(i, s);
+    }
+
+    return ResultsStruct {
+        anagrams: anagrams_js,
+        partials: partials_js,
+    };
 }
 
 #[allow(dead_code)]
 fn main() {
-    // let start = Instant::now();
-    trie_solve();
-    // let duration = start.elapsed();
-    // println!("Time elapsed: {:?}", duration);
 
-    // let start = Instant::now();
-    // factored_solve();
-    // let duration = start.elapsed();
-    // println!("Time elapsed: {:?}", duration);
+    let target = "the quick brown";
+    let min_length = 4;
+    let max_words = 2;
 
     let start = Instant::now();
-    counter_solve();
+    counter_solve(target, min_length, max_words);
     let duration = start.elapsed();
     println!("Time elapsed: {:?}", duration);
 }
