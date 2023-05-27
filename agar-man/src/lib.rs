@@ -12,6 +12,7 @@ use std::time::Instant;
 use std::u64::MAX;
 use std::{cmp, str};
 use wasm_bindgen::prelude::*;
+use rustc_hash::{FxHashMap, FxHasher};
 
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
@@ -28,8 +29,8 @@ fn contained(smaller: &str, larger: &str) -> bool {
         return false;
     }
 
-    let smaller_counts = to_small_counter(smaller);
-    let larger_counts = to_small_counter(larger);
+    let smaller_counts = to_counter(smaller);
+    let larger_counts = to_counter(larger);
 
     let zero: usize = 0;
 
@@ -80,9 +81,6 @@ fn compare_char_array(a: &Vec<usize>, b: &Vec<usize>) -> bool {
     false
 }
 
-type Counter = [u32; ALPHA_SIZE];
-
-/** Convert string into an array of character counts where a[0] is the count of 'a', a[1] is 'b', etc. */
 fn to_counter(s: &str) -> Counter {
     let mut counts = [0; ALPHA_SIZE];
     for c in s.chars() {
@@ -92,28 +90,28 @@ fn to_counter(s: &str) -> Counter {
     counts
 }
 
-fn to_small_counter(s: &str) -> SmallCounter {
+fn to_counter_indexed(s: &str, indices: &[usize; ALPHA_SIZE]) -> Counter {
     let mut counts = [0; ALPHA_SIZE];
     for c in s.chars() {
-        let i = to_index(c);
+        let i = indices[to_index(c)];
         counts[i] += 1;
     }
     counts
 }
 
-fn add_counters(a: &mut SmallCounter, b: &SmallCounter) {
+fn add_counters(a: &mut Counter, b: &Counter) {
     for i in 0..ALPHA_SIZE {
         a[i] += b[i];
     }
 }
 
-fn subtract_counters(a: &mut SmallCounter, b: &SmallCounter) {
+fn subtract_counters(a: &mut Counter, b: &Counter) {
     for i in 0..ALPHA_SIZE {
         a[i] -= b[i];
     }
 }
 
-fn counter_contains(a: &SmallCounter, b: &SmallCounter) -> bool {
+fn counter_contains(a: &Counter, b: &Counter) -> bool {
     for i in 0..ALPHA_SIZE {
         if a[i] < b[i] {
             return false;
@@ -131,7 +129,7 @@ fn word_to_bitmask(s: &str) -> u32 {
     bitmask
 }
 
-fn counter_to_bitmask(counter: &SmallCounter) -> u32 {
+fn counter_to_bitmask(counter: &Counter) -> u32 {
     let mut bitmask: u32 = 0;
     for i in 0..ALPHA_SIZE {
         if counter[i] != 0 {
@@ -485,7 +483,7 @@ const PRIMES: [u64; 26] = [
 fn find_anagrams(
     target: &Integer,
     target_length: usize,
-    target_counter: &mut SmallCounter,
+    target_counter: &mut Counter,
     products_by_length: &Vec<BTreeSet<u64>>,
     min_word_length: usize,
     max_num_words: usize,
@@ -493,8 +491,13 @@ fn find_anagrams(
     max: u64,
     found_anagrams: &mut Vec<Vec<u64>>,
     product_to_bitmask: &IntMap<u64, u32>,
-    product_to_counter: &IntMap<u64, SmallCounter>,
+    product_to_counter: &IntMap<u64, Counter>,
 ) {
+    if target_length == 0 {
+        found_anagrams.push(path.clone());
+        return;
+    }
+
     // if there are no possible words, return
     if target_length < min_word_length {
         return;
@@ -503,15 +506,6 @@ fn find_anagrams(
     // if we have reached the max number of words but still need more letters, return
     if path.len() == max_num_words && target_length != 0 {
         return;
-    }
-
-    // if the target is in the hashmap, append
-    if let Some(target) = target.to_u64() {
-        if products_by_length[target_length].contains(&target) {
-            path.push(target);
-            found_anagrams.push(path.clone());
-            path.pop();
-        }
     }
 
     let target_bitmask = counter_to_bitmask(target_counter);
@@ -554,7 +548,7 @@ fn find_anagrams(
 
 fn factored_anagram_solve() {
     let target = "misunderstanding".to_string();
-    let min_word_length = 4;
+    let min_word_length = 3;
     let max_num_words = 10;
 
     let dictionary = include_str!("dictionary.txt");
@@ -606,7 +600,7 @@ fn factored_anagram_solve() {
         1000000,
         BuildHasherDefault::<NoHashHasher<u64>>::default(),
     );
-    let mut product_to_counter = IntMap::<u64, SmallCounter>::with_capacity_and_hasher(
+    let mut product_to_counter = IntMap::<u64, Counter>::with_capacity_and_hasher(
         1000000,
         BuildHasherDefault::<NoHashHasher<u64>>::default(),
     );
@@ -635,7 +629,7 @@ fn factored_anagram_solve() {
             .or_insert(word_to_bitmask(&line));
         product_to_counter
             .entry(product)
-            .or_insert(to_small_counter(&line));
+            .or_insert(to_counter(&line));
 
         if let Some(words) = products_to_words.get_mut(&product) {
             words.push(line);
@@ -657,17 +651,11 @@ fn factored_anagram_solve() {
 
     let mut found_anagrams: Vec<Vec<u64>> = Vec::new();
     let mut path: Vec<u64> = Vec::with_capacity(target.len());
-    // let mut excluded: HashSet<i128> = HashSet::new();
-    let mut excluded = IntSet::<u64>::with_capacity_and_hasher(
-        1000000,
-        BuildHasherDefault::<NoHashHasher<u64>>::default(),
-    );
 
-    let start = Instant::now();
     find_anagrams(
         &target_product,
         target.len(),
-        &mut to_small_counter(&target),
+        &mut to_counter(&target),
         &products_by_length,
         min_word_length,
         max_num_words,
@@ -708,14 +696,13 @@ fn factored_anagram_solve() {
 
     println!("All combinations: {}", all_combos.len());
 
-    // println!("Combos: {:?}", all_combos);
 }
 
-type SmallCounter = [u8; ALPHA_SIZE];
+type Counter = [u8; ALPHA_SIZE];
 
 #[derive(Debug, Default)]
 struct CounterNode {
-    products: Vec<u64>,
+    product: u64,
     children: Vec<(u8, CounterNode)>,
 }
 
@@ -724,16 +711,14 @@ impl CounterNode {
         Default::default()
     }
 
-    fn insert(&mut self, counter: &SmallCounter, counter_product: &u64, index: usize) {
-        // if index == ALPHA_SIZE {
-        // self.product = *counter_product;
-        // return;
-        // }
-
+    fn insert(&mut self, counter: &Counter, counter_product: &u64, index: usize) {
         let remaining_sum = counter.iter().skip(index).sum::<u8>();
 
         if remaining_sum == 0 {
-            self.products.push(*counter_product);
+            if self.product != 0 {
+                panic!("Duplicate product");
+            }
+            self.product = *counter_product;
             return;
         }
 
@@ -753,18 +738,10 @@ impl CounterNode {
             let mut new = CounterNode::new();
             new.insert(counter, counter_product, index + 1);
             self.children.push((count, new));
-
-            // self.children.sort_by(|a, b| a.0.cmp(&b.0));
         }
-
-        // if self.children[i].is_none() {
-        //     self.children[i] = Some(Box::new(CounterNode::new()));
-        // }
-        // self.children[i].as_mut().unwrap().insert(counter, counter_product, index + 1);
     }
 
     fn sort(&mut self) {
-        self.products.sort();
         self.children.sort_by(|a, b| a.0.cmp(&b.0));
         for (_, child) in &mut self.children {
             child.sort();
@@ -773,26 +750,18 @@ impl CounterNode {
 
     fn retrieve_anagrams(
         &self,
-        target_counter: &SmallCounter,
+        target_counter: &Counter,
         index: usize,
         result_products: &mut Vec<u64>,
-        max_product: u64,
+        // min_product: &u64,
     ) {
-        for product in &self.products {
-            if *product > max_product {
-                break;
-            }
-            result_products.push(*product);
-        }
+        // if self.product >= *min_product {
+            result_products.push(self.product);
+        // }
 
         for (child_count, child) in &self.children {
             if *child_count <= target_counter[index] {
-                child.retrieve_anagrams(
-                    target_counter,
-                    index + 1,
-                    result_products,
-                    max_product,
-                );
+                child.retrieve_anagrams(target_counter, index + 1, result_products);
             } else {
                 // we can stop here because the children are sorted
                 break;
@@ -805,61 +774,79 @@ impl CounterNode {
 fn find_anagrams_counter(
     target_product: &Integer,
     target_length: usize,
-    target_counter: &mut SmallCounter,
-    product_to_length: &IntMap<u64, usize>,
+    target_counter: &mut Counter,
+    product_to_length: &HashMap<u64, usize, BuildHasherDefault<FxHasher>>,
     min_word_length: &usize,
     max_num_words: &usize,
     path: &mut Vec<u64>,
     found_anagrams: &mut Vec<Vec<u64>>,
-    product_to_counter: &IntMap<u64, SmallCounter>,
+    product_to_counter:&HashMap<u64, Counter, BuildHasherDefault<FxHasher>>,
     counter_root: &CounterNode,
-    max_product: u64,
+    min_product: u64,
+    cache: &mut HashMap<Integer, Vec<u64>, BuildHasherDefault<FxHasher>>,
 ) {
-    if target_length == 0 {
-        found_anagrams.push(path.clone());
-        return;
-    }
-
-    // if we have reached the max number of words but still need more letters, return
-    if path.len() == *max_num_words {
-        return;
-    }
 
     let mut products = Vec::new();
 
-    counter_root.retrieve_anagrams(target_counter, 0, &mut products, max_product);
+    match cache.get(&target_product) {
+        None => {
+            counter_root.retrieve_anagrams(target_counter, 0, &mut products);
+            glidesort::sort(&mut products);
+            products.reverse();
+            cache.insert(target_product.clone(), products.clone());
+        }
+        
+        Some(p) => {
+            products.extend(p);
+        }
+    };
 
     for product in products {
+        if product < min_product {
+            break;
+        }
+
         let product_counter = product_to_counter.get(&product).unwrap();
         let product_length = product_to_length.get(&product).unwrap();
 
-        if *product_length < *min_word_length {
+        if product_length < min_word_length {
             continue;
         }
 
-        path.push(product.clone());
-        subtract_counters(target_counter, product_counter);
-        find_anagrams_counter(
-            &target_product.clone().div_exact_u64(product),
-            target_length - product_length,
-            target_counter,
-            product_to_length,
-            min_word_length,
-            max_num_words,
-            path,
-            found_anagrams,
-            product_to_counter,
-            counter_root,
-            product,
-        );
-        add_counters(target_counter, product_counter);
-        path.pop();
+        let new_target_length = target_length - product_length;
+
+        if new_target_length == 0 {
+            path.push(product.clone());
+            found_anagrams.push(path.clone());
+            path.pop();
+        } else if new_target_length < *min_word_length || path.len() == *max_num_words - 1 {
+            continue;
+        } else {
+            path.push(product.clone());
+            subtract_counters(target_counter, product_counter);
+            find_anagrams_counter(
+                &target_product.clone().div_exact_u64(product),
+                new_target_length,
+                target_counter,
+                product_to_length,
+                min_word_length,
+                max_num_words,
+                path,
+                found_anagrams,
+                product_to_counter,
+                counter_root,
+                product,
+                cache,
+            );
+            add_counters(target_counter, product_counter);
+            path.pop();
+        }
     }
 }
 
 fn counter_solve() {
     let target = "misunderstanding".to_string();
-    let min_word_length = 4;
+    let min_word_length = 3;
     let max_num_words = 10;
 
     let dictionary = include_str!("dictionary.txt");
@@ -890,16 +877,28 @@ fn counter_solve() {
 
     // sort primes by character frequency
     // argsort letter_frequencies
-    let mut sorted_indices: [usize; ALPHA_SIZE] = [
+    let mut index_map: [usize; ALPHA_SIZE] = [
         0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
         25,
     ];
+
+    let target_counts = to_counter(&target);
+    println!("Target counts: {:?}", target_counts);
+
+    // argsort target_counts
+    let mut sorted_indices: Vec<usize> = (0..ALPHA_SIZE).collect();
     sorted_indices.sort_by(|a, b| letter_frequencies[*b].cmp(&letter_frequencies[*a]));
 
-    let mut rev_indices = sorted_indices.clone();
-    rev_indices.reverse();
+    // map indices to sorted indices
+    for (i, j) in sorted_indices.iter().enumerate() {
+        index_map[*j] = i;
+    }
 
-    println!("Sorted indices: {:?}", sorted_indices);
+    println!("Ordered indices: {:?}", index_map);
+    let ordered_target_counts = to_counter_indexed(&target, &index_map);
+    println!("Ordered target counts: {:?}", ordered_target_counts);
+
+    println!("Sorted indices: {:?}", index_map);
 
     // assign primes to letters
     let mut letter_primes = [0; ALPHA_SIZE];
@@ -910,16 +909,9 @@ fn counter_solve() {
     println!("Letter primes: {:?}", letter_primes);
 
     // hashmap of products to words
-    let mut products_to_words: HashMap<u64, Vec<String>> = HashMap::new();
-    // let mut products_by_length: Vec<BTreeSet<u64>> = vec![BTreeSet::new(); target.len() + 1];
-    let mut product_to_length = IntMap::<u64, usize>::with_capacity_and_hasher(
-        1000000,
-        BuildHasherDefault::<NoHashHasher<u64>>::default(),
-    );
-    let mut product_to_counter = IntMap::<u64, SmallCounter>::with_capacity_and_hasher(
-        1000000,
-        BuildHasherDefault::<NoHashHasher<u64>>::default(),
-    );
+    let mut products_to_words: HashMap<u64, Vec<String>, BuildHasherDefault<FxHasher>> = FxHashMap::default();
+    let mut product_to_length = FxHashMap::default();
+    let mut product_to_counter = FxHashMap::default();
 
     let mut root = CounterNode::new();
 
@@ -933,7 +925,7 @@ fn counter_solve() {
             product *= letter_primes[i];
         }
 
-        let product_counter = to_small_counter(&line);
+        let product_counter = to_counter_indexed(&line, &index_map);
 
         // products_by_length[length].insert(product);
         product_to_length.insert(product, length);
@@ -953,13 +945,13 @@ fn counter_solve() {
 
     println!("Products: {:?}", product_to_counter.len());
 
-    let mut target_counter = to_small_counter(&target);
+    let mut target_counter = to_counter_indexed(&target, &index_map);
 
     println!("Target counter: {:?}", target_counter);
 
     let mut result_products = Vec::new();
 
-    root.retrieve_anagrams(&target_counter, 0, &mut result_products, u64::MAX);
+    root.retrieve_anagrams(&target_counter, 0, &mut result_products);
 
     println!("Result products: {:?}", result_products.len());
 
@@ -970,6 +962,8 @@ fn counter_solve() {
         let i = to_index(c);
         target_product *= letter_primes[i];
     }
+
+    let mut cache = FxHashMap::default();
 
     find_anagrams_counter(
         &target_product,
@@ -982,7 +976,8 @@ fn counter_solve() {
         &mut found_anagrams,
         &product_to_counter,
         &root,
-        MAX,
+        2,
+        &mut cache
     );
 
     println!("Found anagrams: {:?}", found_anagrams.len());
@@ -990,7 +985,10 @@ fn counter_solve() {
 
 #[allow(dead_code)]
 fn main() {
+    // let start = Instant::now();
     // solve_anagrams();
+    // let duration = start.elapsed();
+    // println!("Time elapsed: {:?}", duration);
 
     let start = Instant::now();
     factored_anagram_solve();
