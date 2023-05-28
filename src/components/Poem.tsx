@@ -66,7 +66,7 @@ export const Poem: React.VFC<{ seed: string; sentence: string, showPerms:boolean
                           index !== letterIndex && "text-neutral-300"
                         }`}
                       >
-                        {letter === " " ? <span>&nbsp;</span> : letter}
+                        {letter === " " ? <span>&nbsp;</span> : letter.toUpperCase()}
                       </div>
                     );
                   })}
