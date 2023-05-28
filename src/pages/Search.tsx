@@ -1,6 +1,6 @@
 import { Tab } from "@headlessui/react";
 import init, { js_generate } from "agar-man";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { GrReturn } from "react-icons/gr";
 import AutoSizer from "react-virtualized-auto-sizer";
 import { FixedSizeList as List } from "react-window";
@@ -71,6 +71,7 @@ const Input: React.VFC<{
     seed: string;
     minLength: number;
     maxWords: number;
+    excludes: string;
   }) => void;
   renderedSeed: string;
 }> = ({ loading, generate, renderedSeed }) => {
@@ -78,10 +79,11 @@ const Input: React.VFC<{
 
   const [minLength, setMinLength] = useState<number>(3);
   const [maxWords, setMaxWords] = useState<number>(5);
+  const [excludes, setExcludes] = useState<string>("");
 
   const [lengthOptions, setLengthOptions] = useState<number[]>([]);
   const [maxWordsOptions, setMaxWordsOptions] = useState<number[]>([
-    1, 2, 3, 4, 5, 6, 7, 8
+    1, 2, 3, 4, 5, 6, 7, 8,
   ]);
 
   return (
@@ -89,9 +91,9 @@ const Input: React.VFC<{
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          generate({ seed, minLength, maxWords });
+          generate({ seed, minLength, maxWords, excludes });
         }}
-        className="flex"
+        className="flex flex-col"
       >
         <input
           spellCheck="false"
@@ -130,10 +132,30 @@ const Input: React.VFC<{
             setSeed(cleanedSeed);
           }}
         />
+        <input
+          spellCheck="false"
+          autoCapitalize="none"
+          autoCorrect="off"
+          autoComplete="off"
+          className="w-full px-2 py-1 border-b border-black outline-none"
+          placeholder="Words to exclude (comma separated)..."
+          type="text"
+          value={excludes}
+          disabled={loading}
+          onChange={(e) => {
+            let cleaned = e.target.value
+              .replace(/[^a-zA-Z],\s/g, "")
+              .toLowerCase();
+
+            setExcludes(cleaned);
+          }}
+        />
       </form>
       {lengthOptions.length > 0 && (
         <div className="flex flex-wrap w-full text-sm border-b border-black select-none">
-          <div className="px-2 py-1 border-r border-neutral-300">Minimum word length</div>
+          <div className="px-2 py-1 border-r border-neutral-300">
+            Minimum word length
+          </div>
           {lengthOptions.map((length, index) => {
             return (
               <button
@@ -154,7 +176,9 @@ const Input: React.VFC<{
       )}
       {maxWordsOptions.length > 0 && (
         <div className="flex flex-wrap w-full text-sm select-none">
-          <div className="px-2 py-1 border-r  border-neutral-300">Max words</div>
+          <div className="px-2 py-1 border-r  border-neutral-300">
+            Max words
+          </div>
           {maxWordsOptions.map((max, index) => {
             return (
               <button
@@ -178,7 +202,7 @@ const Input: React.VFC<{
         className="px-2 flex justify-center items-center border-t py-1 border-black hover:bg-neutral-100 select-none"
         disabled={loading}
         onClick={() => {
-          generate({ seed, minLength, maxWords });
+          generate({ seed, minLength, maxWords, excludes });
         }}
       >
         Generate
@@ -208,17 +232,19 @@ export const Search = () => {
   const [executionTime, setExecutionTime] = useState(0);
 
   useEffect(() => {
-    generate({ seed: "anagram", minLength: 3, maxWords: 5 });
+    generate({ seed: "anagram", minLength: 3, maxWords: 5, excludes:"" });
   }, []);
 
   const generate = ({
     seed,
     minLength,
     maxWords,
+    excludes,
   }: {
     seed: string;
     minLength: number;
     maxWords: number;
+    excludes: string;
   }) => {
     setLoading(true);
     init().then(() => {
@@ -226,7 +252,8 @@ export const Search = () => {
       const { anagrams, partials } = js_generate(
         seed.toLowerCase(),
         minLength,
-        maxWords
+        maxWords,
+        excludes
       );
       setResults([...anagrams]);
       setPartials(
@@ -259,7 +286,8 @@ export const Search = () => {
               ) : (
                 <>
                   {results.length.toLocaleString("en-US")} results in{" "}
-                  {(executionTime/1000).toLocaleString("en-US")}s for "{renderedSeed}"
+                  {(executionTime / 1000).toLocaleString("en-US")}s for "
+                  {renderedSeed}"
                 </>
               )}
             </div>

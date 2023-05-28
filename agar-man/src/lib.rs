@@ -35,8 +35,8 @@ fn contained(smaller: &str, larger: &str) -> bool {
     return counter_contains(&larger_counts, &smaller_counts);
 }
 
-fn filter_line(line: &String, seed: &str, min_length: usize) -> bool {
-    line.chars().all(char::is_alphanumeric) & (line.len() >= min_length) & contained(line, seed)
+fn filter_line(line: &String, seed: &str, min_length: usize, excludes: &HashSet<String>) -> bool {
+    line.chars().all(char::is_alphanumeric) & (line.len() >= min_length) & contained(line, seed) & !excludes.contains(&line.to_lowercase())
 }
 
 fn filter_grid_word(word: &String, grid_letters: &Vec<char>, min_length: usize) -> bool {
@@ -257,14 +257,14 @@ impl Trie {
     }
 }
 
-pub fn trie_solve(seed: &str, min_length: usize) -> (Vec<String>, Vec<String>) {
+pub fn trie_solve(seed: &str, min_length: usize, excludes: &HashSet<String>) -> (Vec<String>, Vec<String>) {
     let dictionary = include_str!("dictionary.txt");
 
     let seed = str::replace(seed, " ", "").to_string();
 
     let lines: Vec<String> = dictionary.split("\n").map(str::to_string).collect();
 
-    let filter_line_closure = |line: &String| filter_line(line, &seed, min_length);
+    let filter_line_closure = |line: &String| filter_line(line, &seed, min_length, excludes);
     let processed_lines: Vec<String> = lines // using String as the return type of `to_lowercase`
         .iter()
         .map(process_line)
@@ -582,6 +582,7 @@ fn counter_solve(
     target: &str,
     min_length: usize,
     max_num_words: usize,
+    excludes: &HashSet<String>,
 ) -> (Vec<String>, Vec<String>) {
     // filter out all non-abecedarian characters
     let target = target
@@ -605,7 +606,7 @@ fn counter_solve(
 
     let filtered_lines = word_counts // using String as the return type of `to_lowercase`
         .iter()
-        .filter(|(word,count)| filter_line(word, &target, min_length))
+        .filter(|(word,count)| filter_line(word, &target, min_length, excludes))
         .map(|(word,count)| word.clone())
         .collect::<Vec<String>>();
 
@@ -753,9 +754,10 @@ pub struct ResultsStruct {
 }
 
 #[wasm_bindgen]
-pub fn js_generate(seed: String, min_length: usize, max_num_words: usize) -> ResultsStruct {
+pub fn js_generate(seed: String, min_length: usize, max_num_words: usize, excludes: String) -> ResultsStruct {
     console_error_panic_hook::set_once();
-    let (anagrams, partials) = counter_solve(&seed, min_length, max_num_words);
+    let excludes = excludes.trim().split(",").map(|x| x.trim().to_lowercase()).collect::<HashSet<_>>();
+    let (anagrams, partials) = counter_solve(&seed, min_length, max_num_words, &excludes);
 
     let anagrams_js = Array::new_with_length(anagrams.len() as u32);
     for i in 0..anagrams_js.length() {
@@ -918,12 +920,12 @@ fn main() {
     // filter_1grams();
     // assign_counts();
 
-    let target = "misunderstanding";
-    let min_length = 4;
-    let max_words = 5;
+    let target = "attentionisallyouneed";
+    let min_length = 3;
+    let max_words = 4;
 
     let start = Instant::now();
-    counter_solve(target, min_length, max_words);
+    counter_solve(target, min_length, max_words, &HashSet::default());
     let duration = start.elapsed();
     println!("Time elapsed: {:?}", duration);
 }
