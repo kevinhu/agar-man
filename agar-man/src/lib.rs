@@ -1,13 +1,16 @@
 extern crate js_sys;
 extern crate wasm_bindgen;
+use flate2::read::GzDecoder;
 use itertools::Itertools;
 use js_sys::Array;
-use std::collections::{HashMap, HashSet};
-use std::hash::BuildHasherDefault;
-use std::time::Instant;
-use std::{cmp, str};
-use wasm_bindgen::prelude::*;
 use rustc_hash::{FxHashMap, FxHasher};
+use std::collections::{HashMap, HashSet};
+use std::fs::File;
+use std::hash::BuildHasherDefault;
+use std::io::{BufRead, BufReader, Write};
+use std::time::Instant;
+use std::{cmp, fs, str};
+use wasm_bindgen::prelude::*;
 
 // #[global_allocator]
 // static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
@@ -33,10 +36,7 @@ fn contained(smaller: &str, larger: &str) -> bool {
 }
 
 fn filter_line(line: &String, seed: &str, min_length: usize) -> bool {
-
-    line.chars().all(char::is_alphanumeric)
-        & (line.len() >= min_length)
-        & contained(line, seed)
+    line.chars().all(char::is_alphanumeric) & (line.len() >= min_length) & contained(line, seed)
 }
 
 fn filter_grid_word(word: &String, grid_letters: &Vec<char>, min_length: usize) -> bool {
@@ -514,12 +514,11 @@ fn find_anagrams_counter(
     max_num_words: &usize,
     path: &mut Vec<WordProduct>,
     found_anagrams: &mut Vec<Vec<WordProduct>>,
-    product_to_counter:&HashMap<WordProduct, Counter, BuildHasherDefault<FxHasher>>,
+    product_to_counter: &HashMap<WordProduct, Counter, BuildHasherDefault<FxHasher>>,
     counter_root: &CounterNode,
     min_product: WordProduct,
     cache: &mut HashMap<Counter, Vec<WordProduct>, BuildHasherDefault<FxHasher>>,
 ) {
-
     let mut products = Vec::new();
 
     match cache.get(target_counter) {
@@ -529,7 +528,7 @@ fn find_anagrams_counter(
             products.reverse();
             cache.insert(target_counter.clone(), products.clone());
         }
-        
+
         Some(p) => {
             products.extend(p);
         }
@@ -558,7 +557,7 @@ fn find_anagrams_counter(
             continue;
         } else {
             path.push(product.clone());
-            
+
             subtract_counters(target_counter, product_counter);
             find_anagrams_counter(
                 new_target_length,
@@ -579,22 +578,38 @@ fn find_anagrams_counter(
     }
 }
 
-fn counter_solve(target: &str, min_length: usize, max_num_words: usize) -> (Vec<String>, Vec<String>) {
+fn counter_solve(
+    target: &str,
+    min_length: usize,
+    max_num_words: usize,
+) -> (Vec<String>, Vec<String>) {
     // filter out all non-abecedarian characters
     let target = target
         .chars()
         .filter(|c| c.is_ascii_alphabetic())
-        .collect::<String>().to_lowercase();
+        .collect::<String>()
+        .to_lowercase();
 
-    let dictionary = include_str!("dictionary.txt");
-    let lines: Vec<String> = dictionary.split("\n").map(str::to_string).collect();
+    let dictionary = include_str!("dictionary_counts.txt");
 
-    let filter_line_closure = |line: &String| filter_line(line, &target, min_length);
-    let filtered_lines: Vec<String> = lines // using String as the return type of `to_lowercase`
+    let mut word_counts = Vec::new();
+    for line in dictionary.split("\n") {
+        if line.len() == 0 {
+            continue;
+        }
+        let mut split = line.split("\t");
+        let word = split.next().unwrap();
+        let count = split.next().unwrap().parse::<u32>().unwrap();
+        word_counts.push((word.to_string(), count));
+    }
+
+    let filtered_lines = word_counts // using String as the return type of `to_lowercase`
         .iter()
-        .map(process_line)
-        .filter(filter_line_closure)
-        .collect();
+        .filter(|(word,count)| filter_line(word, &target, min_length))
+        .map(|(word,count)| word.clone())
+        .collect::<Vec<String>>();
+
+    let counts_map = FxHashMap::from_iter(word_counts);
 
     let mut letter_frequencies = [0; ALPHA_SIZE];
     for line in &filtered_lines {
@@ -629,7 +644,8 @@ fn counter_solve(target: &str, min_length: usize, max_num_words: usize) -> (Vec<
     }
 
     // hashmap of products to words
-    let mut products_to_words: HashMap<WordProduct, Vec<String>, BuildHasherDefault<FxHasher>> = FxHashMap::default();
+    let mut products_to_words: HashMap<WordProduct, Vec<String>, BuildHasherDefault<FxHasher>> =
+        FxHashMap::default();
     let mut product_to_length = FxHashMap::default();
     let mut product_to_counter = FxHashMap::default();
 
@@ -678,7 +694,7 @@ fn counter_solve(target: &str, min_length: usize, max_num_words: usize) -> (Vec<
         &product_to_counter,
         &root,
         2,
-        &mut cache
+        &mut cache,
     );
 
     found_anagrams.sort_by(|a, b| b.len().cmp(&a.len()));
@@ -693,24 +709,38 @@ fn counter_solve(target: &str, min_length: usize, max_num_words: usize) -> (Vec<
             anagram_strings.push(words.clone());
         }
         // take the cartesian product of the words
-        let expanded = anagram_strings
-            .iter()
-            .multi_cartesian_product();
+        let expanded = anagram_strings.iter().multi_cartesian_product();
 
         for mut product in expanded {
             let mut string = String::new();
+            let mut count_avg = 0.0;
+            let mut num_words = 0;
             // sort words alphabetically
             glidesort::sort(&mut product);
             for word in product {
                 string.push_str(word);
+                let word_count = counts_map.get(word).unwrap();
+                count_avg += *word_count as f64;
+                num_words += 1;
+
                 string.push(' ');
             }
+            count_avg /= num_words as f64;
+
             string.pop();
-            found_anagrams_strings.push(string);
+            found_anagrams_strings.push((string, count_avg));
         }
     }
 
-    glidesort::sort(&mut found_anagrams_strings);
+    // glidesort::sort(&mut found_anagrams_strings);
+    glidesort::sort_by(&mut found_anagrams_strings, |a, b| {
+        b.1.total_cmp(&a.1)
+    });
+
+    let found_anagrams_strings = found_anagrams_strings
+        .into_iter()
+        .map(|(string, count_avg)| string)
+        .collect::<Vec<String>>();
 
     return (found_anagrams_strings, filtered_lines);
 }
@@ -745,12 +775,152 @@ pub fn js_generate(seed: String, min_length: usize, max_num_words: usize) -> Res
     };
 }
 
+fn aggregate_1grams() {
+    // let mut lines = Vec::new();
+
+    // list files in ./1grams
+    let paths = fs::read_dir("./data/1grams").unwrap();
+
+    let mut total_counts = Vec::new();
+
+    for path in paths {
+        // ignore if path is not .gz
+        let path = path.unwrap();
+        if path.path().extension().unwrap_or_default() != "gz" {
+            continue;
+        }
+
+        println!("Processing {:?}", path);
+
+        // open file
+        let file = File::open(path.path()).unwrap();
+        let reader = BufReader::new(GzDecoder::new(file));
+
+        // read lines
+        for line in reader.lines() {
+            let line = line.unwrap();
+            let mut split = line.split("\t");
+            let word = split.next().unwrap().to_string();
+
+            let mut total = 0;
+
+            for count in split {
+                // format is (year, count, volumes)
+                let mut count_split = count.split(',');
+
+                let year = count_split.next().unwrap();
+                let count = count_split.next().unwrap();
+
+                // println!("{} {} {}", word, year, count);
+
+                total += count.parse::<u64>().unwrap();
+            }
+
+            total_counts.push((word, total));
+        }
+
+        // println!("Total counts: {:?}", total_counts);
+    }
+    let mut out = File::create("./data/total_counts.txt").unwrap();
+
+    // sort by word
+    glidesort::sort_by(&mut total_counts, |a, b| a.1.cmp(&b.1));
+
+    // write total counts to file
+    for (word, count) in total_counts {
+        out.write_all(format!("{}\t{}\n", word, count).as_bytes())
+            .unwrap();
+    }
+}
+
+fn filter_1grams() {
+    // let mut lines = Vec::new();
+
+    // read frequencies
+    let file = File::open("./data/total_counts.txt").unwrap();
+    let reader = BufReader::new(file);
+
+    let mut counts = FxHashMap::default();
+
+    for line in reader.lines() {
+        let line = line.unwrap();
+        let mut split = line.split("\t");
+        let word = split.next().unwrap().to_string();
+
+        // only accept if is all alphabetical
+        if !word.chars().all(|c| c.is_ascii_alphabetic()) {
+            continue;
+        }
+
+        let count = split.next().unwrap().parse::<u64>().unwrap();
+        let lowercase = word.to_lowercase();
+
+        // counts.insert(word.to_lowercase(), count);
+
+        if counts.contains_key(&lowercase) {
+            let old_count = counts.get(&lowercase).unwrap();
+            counts.insert(lowercase, old_count + count);
+        } else {
+            counts.insert(lowercase, count);
+        }
+    }
+
+    let mut v = Vec::from_iter(counts);
+    glidesort::sort_by(&mut v, |a, b| b.1.cmp(&a.1));
+
+    let mut filtered = File::create("./data/filtered_counts.txt").unwrap();
+
+    for (word, count) in v {
+        filtered.write_all(format!("{}\t{}\n", word, count).as_bytes())
+            .unwrap();
+    }
+}
+
+fn assign_counts() {
+    let dictionary = include_str!("dictionary.txt");
+
+    let mut counts = FxHashMap::default();
+    let counts_file = File::open("./data/filtered_counts.txt").unwrap();
+    let counts_reader = BufReader::new(counts_file);
+
+    for line in counts_reader.lines() {
+        let line = line.unwrap();
+        let mut split = line.split("\t");
+        let word = split.next().unwrap().to_string();
+        let count = split.next().unwrap().parse::<u64>().unwrap();
+
+        counts.insert(word, count);
+    }
+
+    let mut dictionary_counts = Vec::new(); 
+
+    for line in dictionary.lines() {
+        // println!("{}", line);
+        let line = line.to_lowercase();
+        
+        let freq = *counts.get(&line).unwrap_or(&40) as f64 / 40.0;
+
+        dictionary_counts.push((line, (freq.log2() * 100.0) as u32));
+    }
+
+    glidesort::sort_by(&mut dictionary_counts, |a, b| b.1.partial_cmp(&a.1).unwrap());
+    let mut out = File::create("./src/dictionary_counts.txt").unwrap();
+
+    for (word, count) in dictionary_counts {
+        out.write_all(format!("{}\t{}\n", word, count).as_bytes())
+            .unwrap();
+    }
+}
+
 #[allow(dead_code)]
 fn main() {
+    // aggregate_1grams();
+    // filter_1grams();
+    // assign_counts();
 
-    let target = "the quick brown";
+    let target = "misunderstanding";
     let min_length = 4;
-    let max_words = 2;
+    let max_words = 5;
 
     let start = Instant::now();
     counter_solve(target, min_length, max_words);
