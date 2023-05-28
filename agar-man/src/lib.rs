@@ -5,8 +5,8 @@ use js_sys::Array;
 use rustc_hash::{FxHashMap, FxHasher};
 use std::collections::{HashMap, HashSet};
 use std::hash::BuildHasherDefault;
+use std::str;
 use std::time::Instant;
-use std::{str};
 use wasm_bindgen::prelude::*;
 
 // #[global_allocator]
@@ -111,6 +111,12 @@ fn counter_contains(a: &Counter, b: &Counter) -> bool {
         }
     }
     true
+}
+
+fn is_partial_anagram(a: &str, b: &str) -> bool {
+    let mut a_counts = to_counter(a);
+    let b_counts = to_counter(b);
+    return counter_contains(&a_counts, &b_counts);
 }
 
 const PRIMES: [u64; 26] = [
@@ -265,14 +271,25 @@ fn counter_solve(
     min_length: usize,
     max_num_words: usize,
     excludes: &HashSet<String>,
+    includes: &Vec<String>,
     top_n: usize,
 ) -> (Vec<String>, Vec<String>) {
     // filter out all non-abecedarian characters
-    let target = target
+    let mut target = target
         .chars()
         .filter(|c| c.is_ascii_alphabetic())
         .collect::<String>()
         .to_lowercase();
+
+    for included in includes {
+        if !is_partial_anagram(&target, included) {
+            return (Vec::new(), Vec::new());
+        }
+
+        for c in included.chars() {
+            target = target.replacen(&c.to_string(), "", 1);
+        }
+    };
 
     let dictionary = include_str!("dictionary_counts.txt");
 
@@ -368,6 +385,7 @@ fn counter_solve(
     root.sort();
 
     let mut target_counter = to_counter_indexed(&target, &index_map);
+
     let mut found_anagrams = Vec::new();
     let mut cache = FxHashMap::default();
 
@@ -376,7 +394,7 @@ fn counter_solve(
         &mut target_counter,
         &product_to_length,
         &min_length,
-        &max_num_words,
+        &(max_num_words - includes.len()),
         &mut Vec::with_capacity(target.len()),
         &mut found_anagrams,
         &product_to_counter,
@@ -396,12 +414,16 @@ fn counter_solve(
             anagram_strings.push(words.clone());
         }
         // take the cartesian product of the words
-        let expanded = anagram_strings
-            .iter()
-            .multi_cartesian_product();
+        let expanded = anagram_strings.iter().multi_cartesian_product();
 
         for product in expanded {
             let mut string = String::new();
+
+            for included in includes {
+                string.push_str(included);
+                string.push(' ');
+            }
+
             let mut count_avg = 0.0;
             let mut num_words = 0;
             for word in product {
@@ -417,9 +439,7 @@ fn counter_solve(
         }
     }
 
-    glidesort::sort_by(&mut found_anagrams_strings, |a, b| {
-        b.1.total_cmp(&a.1)
-    });
+    glidesort::sort_by(&mut found_anagrams_strings, |a, b| b.1.total_cmp(&a.1));
 
     let found_anagrams_strings = found_anagrams_strings
         .into_iter()
@@ -442,6 +462,7 @@ pub fn js_generate(
     min_length: usize,
     max_num_words: usize,
     excludes: String,
+    includes: String,
     top_n: usize,
 ) -> ResultsStruct {
     console_error_panic_hook::set_once();
@@ -450,7 +471,20 @@ pub fn js_generate(
         .split(",")
         .map(|x| x.trim().to_lowercase())
         .collect::<HashSet<_>>();
-    let (anagrams, partials) = counter_solve(&seed, min_length, max_num_words, &excludes, top_n);
+    let includes = includes
+        .trim()
+        .split(",")
+        .map(|x| x.trim().to_lowercase())
+        .collect::<Vec<_>>();
+
+    let (anagrams, partials) = counter_solve(
+        &seed,
+        min_length,
+        max_num_words,
+        &excludes,
+        &includes,
+        top_n,
+    );
 
     let anagrams_js = Array::new_with_length(anagrams.len() as u32);
     for i in 0..anagrams_js.length() {
@@ -476,12 +510,19 @@ fn main() {
     // filter_1grams();
     // assign_counts();
 
-    let target = "misunderstanding";
+    let target = "village technologies";
     let min_length = 2;
     let max_words = 10;
 
     let start = Instant::now();
-    let results = counter_solve(target, min_length, max_words, &HashSet::default(), 10_000);
+    let results = counter_solve(
+        target,
+        min_length,
+        max_words,
+        &HashSet::default(),
+        &vec!["the".to_string(), "ai".to_string()],
+        200_000,
+    );
     println!("Anagrams: {:?}", results.0.len());
     let duration = start.elapsed();
     println!("Time elapsed: {:?}", duration);

@@ -68,12 +68,14 @@ const Input: React.VFC<{
     minLength,
     maxWords,
     excludes,
+    includes,
     topN,
   }: {
     seed: string;
     minLength: number;
     maxWords: number;
     excludes: string;
+    includes: string;
     topN?: number;
   }) => void;
   renderedSeed: string;
@@ -83,6 +85,7 @@ const Input: React.VFC<{
   const [minLength, setMinLength] = useState<number>(5);
   const [maxWords, setMaxWords] = useState<number>(5);
   const [excludes, setExcludes] = useState<string>("");
+  const [includes, setIncludes] = useState<string>("");
   const [topN, setTopN] = useState<number>();
 
   const [lengthOptions, setLengthOptions] = useState<number[]>([]);
@@ -91,14 +94,14 @@ const Input: React.VFC<{
   ]);
 
   return (
-    <>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          generate({ seed, minLength, maxWords, excludes, topN });
-        }}
-        className="flex flex-col"
-      >
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        generate({ seed, minLength, maxWords, excludes, includes, topN });
+      }}
+      className="flex flex-col"
+    >
+      <>
         <div className="flex w-full">
           <input
             spellCheck="false"
@@ -143,36 +146,67 @@ const Input: React.VFC<{
           />
           <div className="flex items-center border-b border-black">
             <input
-              className="w-full h-full px-2 border-black border-l max-w-[10rem] outline-none"
+              className="h-full px-2 border-black border-l w-[11rem] outline-none"
               value={topN}
               onChange={(e) => {
                 let cleaned = e.target.value.replace(/[^0-9]/g, "");
-                setTopN(parseInt(cleaned));
+                setTopN(parseInt(cleaned) || undefined);
               }}
-              placeholder="Top words..."
+              placeholder="Most common words"
             />
-            <div className="px-2 border-black"><span className="text-neutral-400">/</span><span className="">178,691</span></div>
+            <div className="px-2 border-black">
+              <span className="text-neutral-400">/</span>
+              <span className="">178,691</span>
+            </div>
           </div>
         </div>
-        <input
-          spellCheck="false"
-          autoCapitalize="none"
-          autoCorrect="off"
-          autoComplete="off"
-          className="w-full px-2 py-1 border-b border-black outline-none"
-          placeholder="Words to exclude (comma separated)..."
-          type="text"
-          value={excludes}
-          disabled={loading}
-          onChange={(e) => {
-            let cleaned = e.target.value
-              .replace(/[^a-zA-Z],\s/g, "")
-              .toLowerCase();
+        <div className="border-b border-black flex items-center">
+          <div className="px-2 border-r border-neutral-300 h-full flex items-center w-24">
+            Include
+          </div>
+          <input
+            spellCheck="false"
+            autoCapitalize="none"
+            autoCorrect="off"
+            autoComplete="off"
+            className="w-full px-2 py-1 outline-none"
+            placeholder="Must contain (comma separated)..."
+            type="text"
+            value={includes}
+            disabled={loading}
+            onChange={(e) => {
+              let cleaned = e.target.value
+                .replace(/[^a-zA-Z],\s/g, "")
+                .toLowerCase();
 
-            setExcludes(cleaned);
-          }}
-        />
-      </form>
+              setIncludes(cleaned);
+            }}
+          />
+        </div>
+        <div className="border-b border-black flex items-center">
+          <div className="px-2 border-r border-neutral-300 h-full flex items-center w-24">
+            Exclude
+          </div>
+          <input
+            spellCheck="false"
+            autoCapitalize="none"
+            autoCorrect="off"
+            autoComplete="off"
+            className="w-full px-2 py-1 outline-none"
+            placeholder="Words to exclude (comma separated)..."
+            type="text"
+            value={excludes}
+            disabled={loading}
+            onChange={(e) => {
+              let cleaned = e.target.value
+                .replace(/[^a-zA-Z],\s/g, "")
+                .toLowerCase();
+
+              setExcludes(cleaned);
+            }}
+          />
+        </div>
+      </>
       {lengthOptions.length > 0 && (
         <div className="flex flex-wrap w-full text-sm border-b border-black select-none">
           <div className="px-2 py-1 border-r border-neutral-300">
@@ -224,7 +258,7 @@ const Input: React.VFC<{
         className="px-2 flex justify-center items-center border-t py-1 border-black hover:bg-neutral-100 select-none"
         disabled={loading}
         onClick={() => {
-          generate({ seed, minLength, maxWords, excludes, topN });
+          generate({ seed, minLength, maxWords, excludes, includes, topN });
         }}
       >
         Generate
@@ -232,7 +266,7 @@ const Input: React.VFC<{
           <GrReturn />
         </span>
       </button>
-    </>
+    </form>
   );
 };
 
@@ -254,19 +288,28 @@ export const Search = () => {
   const [executionTime, setExecutionTime] = useState(0);
 
   useEffect(() => {
-    generate({ seed: "anagram", minLength: 3, maxWords: 5, excludes: "", topN: 200_000 });
+    generate({
+      seed: "anagram",
+      minLength: 3,
+      maxWords: 5,
+      excludes: "",
+      includes: "",
+      topN: 200_000,
+    });
   }, []);
 
   const generate = ({
     seed,
     minLength,
     maxWords,
+    includes,
     excludes,
-    topN
+    topN,
   }: {
     seed: string;
     minLength: number;
     maxWords: number;
+    includes: string;
     excludes: string;
     topN?: number;
   }) => {
@@ -278,6 +321,7 @@ export const Search = () => {
         minLength,
         maxWords,
         excludes,
+        includes,
         topN || 200_000
       );
       setResults([...anagrams]);
@@ -334,58 +378,12 @@ export const Search = () => {
             </div>
 
             {!loading && (
-              <Tab.Group
-                as={Fragment}
-                selectedIndex={activeTab}
-                onChange={setActiveTab}
-              >
-                <Tab.List className="flex text-sm border-b border-black select-none">
-                  <Tab as={Fragment}>
-                    {({ selected }) => (
-                      <button
-                        className={`${
-                          selected
-                            ? "bg-black text-white"
-                            : "hover:bg-neutral-100"
-                        } w-1/2 py-1 outline-none`}
-                      >
-                        Partitions
-                      </button>
-                    )}
-                  </Tab>
-                  <Tab as={Fragment}>
-                    {({ selected }) => (
-                      <button
-                        className={`${
-                          selected
-                            ? "bg-black text-white"
-                            : "hover:bg-neutral-100"
-                        } w-1/2 py-1 border-l border-black outline-none`}
-                      >
-                        Partials
-                      </button>
-                    )}
-                  </Tab>
-                </Tab.List>
-                <Tab.Panels as={Fragment}>
-                  <Tab.Panel as={Fragment}>
-                    <Results
-                      results={results}
-                      setRendered={setRendered}
-                      renderedSeed={renderedSeed}
-                      renderedSentence={rendered.sentence}
-                    />
-                  </Tab.Panel>
-                  <Tab.Panel as={Fragment}>
-                    <Results
-                      results={partials}
-                      setRendered={setRendered}
-                      renderedSeed={renderedSeed}
-                      renderedSentence={rendered.sentence}
-                    />
-                  </Tab.Panel>
-                </Tab.Panels>
-              </Tab.Group>
+              <Results
+                results={results}
+                setRendered={setRendered}
+                renderedSeed={renderedSeed}
+                renderedSentence={rendered.sentence}
+              />
             )}
           </div>
           <div className="flex flex-col items-center justify-center mx-auto">
