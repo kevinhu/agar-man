@@ -470,11 +470,13 @@ pub fn js_generate(
         .trim()
         .split(",")
         .map(|x| x.trim().to_lowercase())
+        .filter(|x| !x.is_empty())
         .collect::<HashSet<_>>();
     let includes = includes
         .trim()
         .split(",")
         .map(|x| x.trim().to_lowercase())
+        .filter(|x| !x.is_empty())
         .collect::<Vec<_>>();
 
     let (anagrams, partials) = counter_solve(
