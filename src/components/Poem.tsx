@@ -78,7 +78,7 @@ export const Poem: React.VFC<{ seed: string; sentence: string, showPerms:boolean
       </div>
 
       <CopyToClipboard
-        text={`${window.location.origin}/share/${seed}/${displayedSentence.replace(" ",",")}`}
+        text={`${window.location.origin}/share/${seed}/${displayedSentence.replaceAll(/\s/g,",")}`}
         onCopy={() => setCopied(true)}
       >
         <button className="p-2 mt-6 hover:bg-neutrals-100">

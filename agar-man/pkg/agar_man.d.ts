@@ -5,9 +5,10 @@
 * @param {number} min_length
 * @param {number} max_num_words
 * @param {string} excludes
+* @param {number} top_n
 * @returns {ResultsStruct}
 */
-export function js_generate(seed: string, min_length: number, max_num_words: number, excludes: string): ResultsStruct;
+export function js_generate(seed: string, min_length: number, max_num_words: number, excludes: string, top_n: number): ResultsStruct;
 /**
 */
 export class ResultsStruct {
@@ -29,7 +30,7 @@ export interface InitOutput {
   readonly __wbg_set_resultsstruct_anagrams: (a: number, b: number) => void;
   readonly __wbg_get_resultsstruct_partials: (a: number) => number;
   readonly __wbg_set_resultsstruct_partials: (a: number, b: number) => void;
-  readonly js_generate: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
+  readonly js_generate: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
   readonly __wbindgen_malloc: (a: number) => number;
   readonly __wbindgen_realloc: (a: number, b: number, c: number) => number;
   readonly __wbindgen_free: (a: number, b: number) => void;

@@ -11,7 +11,7 @@ export const Share = () => {
           {seed && components && (
             <Poem
               seed={seed}
-              sentence={components.replace(",", " ")}
+              sentence={components.replace(/,/g, " ")}
               showPerms={false}
             />
           )}

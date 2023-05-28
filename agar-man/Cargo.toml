@@ -18,6 +18,7 @@ opt-level = 3
 codegen-units = 1
 
 [dependencies]
+arbitrary-int = { version = "1.2.5", features = ["num-traits"] }
 console_error_panic_hook = "0.1.7"
 crumsort = "0.1.0"
 flate2 = "1.0.26"

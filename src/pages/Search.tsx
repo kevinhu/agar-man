@@ -67,19 +67,23 @@ const Input: React.VFC<{
     seed,
     minLength,
     maxWords,
+    excludes,
+    topN,
   }: {
     seed: string;
     minLength: number;
     maxWords: number;
     excludes: string;
+    topN?: number;
   }) => void;
   renderedSeed: string;
 }> = ({ loading, generate, renderedSeed }) => {
   const [seed, setSeed] = useState("anagram");
 
-  const [minLength, setMinLength] = useState<number>(3);
+  const [minLength, setMinLength] = useState<number>(5);
   const [maxWords, setMaxWords] = useState<number>(5);
   const [excludes, setExcludes] = useState<string>("");
+  const [topN, setTopN] = useState<number>();
 
   const [lengthOptions, setLengthOptions] = useState<number[]>([]);
   const [maxWordsOptions, setMaxWordsOptions] = useState<number[]>([
@@ -91,47 +95,65 @@ const Input: React.VFC<{
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          generate({ seed, minLength, maxWords, excludes });
+          generate({ seed, minLength, maxWords, excludes, topN });
         }}
         className="flex flex-col"
       >
-        <input
-          spellCheck="false"
-          autoCapitalize="none"
-          autoCorrect="off"
-          autoComplete="off"
-          className="w-full px-2 py-1 border-b border-black outline-none"
-          placeholder="Phrase to search..."
-          type="text"
-          value={seed}
-          disabled={loading}
-          onChange={(e) => {
-            const newLengthOptions = [];
+        <div className="flex w-full">
+          <input
+            spellCheck="false"
+            autoCapitalize="none"
+            autoCorrect="off"
+            autoComplete="off"
+            className="w-full px-2 py-1 border-b border-black outline-none"
+            placeholder="Phrase to search..."
+            type="text"
+            value={seed}
+            disabled={loading}
+            onChange={(e) => {
+              const newLengthOptions = [];
 
-            for (let i = 2; i < Math.ceil(e.target.value.length / 2) + 1; i++) {
-              newLengthOptions.push(Math.floor(i));
-            }
+              for (
+                let i = 2;
+                i < Math.ceil(e.target.value.length / 2) + 1;
+                i++
+              ) {
+                newLengthOptions.push(Math.floor(i));
+              }
 
-            setLengthOptions(newLengthOptions);
+              setLengthOptions(newLengthOptions);
 
-            if (minLength === null || minLength === undefined) {
-              setMinLength(newLengthOptions[0]);
-            } else {
-              if (minLength < newLengthOptions[0]) {
+              if (minLength === null || minLength === undefined) {
                 setMinLength(newLengthOptions[0]);
+              } else {
+                if (minLength < newLengthOptions[0]) {
+                  setMinLength(newLengthOptions[0]);
+                }
+                if (minLength > newLengthOptions[newLengthOptions.length - 1]) {
+                  setMinLength(newLengthOptions[newLengthOptions.length - 1]);
+                }
               }
-              if (minLength > newLengthOptions[newLengthOptions.length - 1]) {
-                setMinLength(newLengthOptions[newLengthOptions.length - 1]);
-              }
-            }
 
-            let cleanedSeed = e.target.value
-              .replace(/[^a-zA-Z]\s/g, "")
-              .toLowerCase();
+              let cleanedSeed = e.target.value
+                .replace(/[^a-zA-Z]\s/g, "")
+                .toLowerCase();
 
-            setSeed(cleanedSeed);
-          }}
-        />
+              setSeed(cleanedSeed);
+            }}
+          />
+          <div className="flex items-center border-b border-black">
+            <input
+              className="w-full h-full px-2 border-black border-l max-w-[10rem] outline-none"
+              value={topN}
+              onChange={(e) => {
+                let cleaned = e.target.value.replace(/[^0-9]/g, "");
+                setTopN(parseInt(cleaned));
+              }}
+              placeholder="Top words..."
+            />
+            <div className="px-2 border-black"><span className="text-neutral-400">/</span><span className="">178,691</span></div>
+          </div>
+        </div>
         <input
           spellCheck="false"
           autoCapitalize="none"
@@ -202,7 +224,7 @@ const Input: React.VFC<{
         className="px-2 flex justify-center items-center border-t py-1 border-black hover:bg-neutral-100 select-none"
         disabled={loading}
         onClick={() => {
-          generate({ seed, minLength, maxWords, excludes });
+          generate({ seed, minLength, maxWords, excludes, topN });
         }}
       >
         Generate
@@ -232,7 +254,7 @@ export const Search = () => {
   const [executionTime, setExecutionTime] = useState(0);
 
   useEffect(() => {
-    generate({ seed: "anagram", minLength: 3, maxWords: 5, excludes:"" });
+    generate({ seed: "anagram", minLength: 3, maxWords: 5, excludes: "", topN: 200_000 });
   }, []);
 
   const generate = ({
@@ -240,11 +262,13 @@ export const Search = () => {
     minLength,
     maxWords,
     excludes,
+    topN
   }: {
     seed: string;
     minLength: number;
     maxWords: number;
     excludes: string;
+    topN?: number;
   }) => {
     setLoading(true);
     init().then(() => {
@@ -253,7 +277,8 @@ export const Search = () => {
         seed.toLowerCase(),
         minLength,
         maxWords,
-        excludes
+        excludes,
+        topN || 200_000
       );
       setResults([...anagrams]);
       setPartials(
@@ -280,7 +305,7 @@ export const Search = () => {
         </div>
         <div className="flex w-full grow border mt-4 border-black">
           <div className="flex flex-col w-1/2 border-r border-black xs:w-1/2 sm:w-1/3 shrink-0">
-            <div className="px-2 pt-1 pb-1 text-sm text-neutral-400 border-b border-black select-none">
+            <div className="px-2 pt-1 pb-1 text-sm flex flex-col text-neutral-400 border-b border-black select-none">
               {loading ? (
                 <>Loading...</>
               ) : (
@@ -290,6 +315,22 @@ export const Search = () => {
                   {renderedSeed}"
                 </>
               )}
+              <button
+                className="border-black max-w-max border px-2 mt-1 text-black hover:bg-neutral-100 select-none"
+                onClick={() => {
+                  const text = results.join("\n");
+                  const file = new Blob([text], {
+                    type: "text/plain",
+                  });
+                  const element = document.createElement("a");
+                  element.href = URL.createObjectURL(file);
+                  element.download = `${renderedSeed}.txt`;
+                  document.body.appendChild(element); // Required for this to work in FireFox
+                  element.click();
+                }}
+              >
+                Download as .txt
+              </button>
             </div>
 
             {!loading && (
